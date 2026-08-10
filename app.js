@@ -1,1353 +1,1190 @@
-(() => {
-  'use strict';
+:root{
+  --bg:#f7f7fb;
+  --surface:rgba(255,255,255,.68);
+  --surface-strong:rgba(255,255,255,.88);
+  --ink:#111219;
+  --muted:#73727e;
+  --line:rgba(64,47,120,.10);
+  --purple:#6f3ff5;
+  --purple-2:#4d45e9;
+  --purple-3:#9d62ff;
+  --blue:#3971f6;
+  --pink:#ef5bb5;
+  --cyan:#72e2e8;
+  --green:#06b981;
+  --amber:#f6b51f;
+  --danger:#e54c68;
+  --shadow:0 22px 60px rgba(63,52,111,.12);
+  --shadow-soft:0 10px 30px rgba(67,54,117,.09);
+  --radius:28px;
+  --radius-sm:18px;
+  --max:1360px;
+  --header-h:80px;
+  --muted: #000000 !important;
+}
 
-  // --- AUTOMATIC CSS FIXES ---
-  const fixStyles = document.createElement('style');
-  fixStyles.innerHTML = `
-    /* --- SINGLE DOCUMENT SCROLLER / NO PHANTOM BOTTOM SPACE --- */
-    html {
-      overflow-x: clip !important;
-      overflow-y: auto !important;
-      height: auto !important;
-      min-height: 100% !important;
-      overscroll-behavior-y: none;
-    }
-    body {
-      margin: 0 !important;
-      overflow-x: clip !important;
-      overflow-y: visible !important;
-      height: auto !important;
-      min-height: 100vh !important;
-      overscroll-behavior-y: none;
-    }
+*{box-sizing:border-box}
+/* Update this rule at the top of your CSS */
+html {
+ background: transparent;
+}
+body{
+  margin:0;
+  min-width:320px;
+  color:var(--ink);
+  background:#f8f8fb;
+  font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+button,input,textarea,select{font:inherit}
+a{color:inherit;text-decoration:none}
+button{color:inherit}
+img{display:block;max-width:100%}
+svg{display:block}
+[hidden]{display:none!important}
 
-    /*
-      IMPORTANT:
-      Decorative mesh / scatter / GSAP elements are absolute and may visually
-      move outside the content. overflow: visible on #app made that visual
-      overflow part of the document scrollable overflow, creating a fake
-      "extra screen" after the footer.
-      Clip ONLY at the outer app boundary. Hero overlays still work because
-      they are not clipped by .hero-feature anymore.
-    */
-    #app {
-      position: relative;
-      overflow: clip !important;
-    }
+::selection{background:rgba(111,63,245,.18);color:#291a66}
 
-    .page-shell {
-      position: relative;
-      padding-bottom: 0 !important;
-    }
+/* Neon focus ring — accessible and on-brand */
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid rgba(139,92,246,.85);
+  outline-offset:2px;
+  box-shadow:0 0 0 5px rgba(139,92,246,.22),0 0 22px rgba(139,92,246,.35);
+  border-radius:10px;
+}
 
-    /* Footer is the real visual/document end */
-    .site-footer {
-      padding-bottom: 12px !important;
-      margin-bottom: 0 !important;
-    }
+.mesh-bg{position:fixed;inset:0;z-index:-2;overflow:hidden;background:linear-gradient(180deg,#fafaff 0%,#f8f7fc 55%,#f8fbfc 100%)}
+.mesh-orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.48;mix-blend-mode:multiply;animation:floatOrb 16s ease-in-out infinite alternate}
+.orb-a{width:520px;height:520px;background:#d8c7ff;left:-100px;top:40px}
+.orb-b{width:600px;height:600px;background:#cfd8ff;right:-140px;top:80px;animation-delay:-6s}
+.orb-c{width:600px;height:600px;background:#ffd8e7;right:8%;bottom:-280px;animation-delay:-9s}
+.noise{position:absolute;inset:0;opacity:.018;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E")}
+@keyframes floatOrb{to{transform:translate3d(70px,45px,0) scale(1.08)}}
 
-    /* Fixed terrain is decorative only */
-    .pixel-terrain { display: none !important; }
-  `;
-  document.head.appendChild(fixStyles);
-
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-
-  const icons = {
-    sparkle: '<svg viewBox="0 0 24 24"><path d="M12 3l1.3 3.8L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.2L12 3Z"/><path d="m18.3 14 .7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2Z"/></svg>',
-    shield: '<svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.6-2.9 8.1-7 10-4.1-1.9-7-5.4-7-10V6l7-3Z"/><path d="m9 12 2 2 4-5"/></svg>',
-    heart: '<svg viewBox="0 0 24 24"><path d="M20.8 4.8a5.4 5.4 0 0 0-7.6 0L12 6l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6L12 21l8.8-8.6a5.4 5.4 0 0 0 0-7.6Z"/></svg>',
-    rocket: '<svg viewBox="0 0 24 24"><path d="M14 5c2.8-2 5.3-2 6-2-.1.8-.3 3.4-2.3 6.1L13 14l-3-3 4-6Z"/><path d="M10 11 6 10l-3 3 5 2M13 14l1 4-3 3-2-5"/><path d="M15.5 7.5h.01"/></svg>',
-    wallet: '<svg viewBox="0 0 24 24"><path d="M4 6h14a2 2 0 0 1 2 2v10H6a2 2 0 0 1-2-2V6Z"/><path d="M4 7V5a2 2 0 0 1 2-2h11v3M15 11h5v4h-5a2 2 0 0 1 0-4Z"/></svg>',
-    users: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
-    badge: '<svg viewBox="0 0 24 24"><path d="M12 3l2 2.2 3-.2.7 2.9 2.5 1.6-1.2 2.7 1.2 2.7-2.5 1.6-.7 2.9-3-.2L12 21l-2-2.2-3 .2-.7-2.9-2.5-1.6L5 11.8 3.8 9.1l2.5-1.6L7 4.6l3 .2L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>',
-    mail: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
-    phone: '<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z"/></svg>',
-    star: '<svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>',
-    clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-    pin: '<svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2"/></svg>',
-    message: '<svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"/></svg>',
-    share: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>',
-    briefcase: '<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/></svg>',
-    award: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="m9 13-1 8 4-2 4 2-1-8"/></svg>',
-    controller: '<svg viewBox="0 0 24 24"><path d="M7 8h10l2.4 6.8a2.3 2.3 0 0 1-4.3 1.7L14 15h-4l-1.1 1.5a2.3 2.3 0 0 1-4.3-1.7L7 8Z"/><path d="M9 11v2.2M7.9 12.1h2.2M16.2 10.2h.01M18.1 12h.01"/></svg>',
-    link: '<svg viewBox="0 0 24 24"><path d="m9 15 6-6"/><path d="M11 6.5 12 5.4a4 4 0 0 1 5.7 5.7l-1.2 1.2M13 17.5l-1 1.1a4 4 0 0 1-5.7-5.7l1.2-1.2"/></svg>',
-    code: '<svg viewBox="0 0 24 24"><path d="m8.5 8.5-4 3.5 4 3.5M15.5 8.5l4 3.5-4 3.5M13.2 6l-2.4 12"/></svg>',
-    trendUp: '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
-    translate: '<svg viewBox="0 0 24 24"><path d="M4 5.5h7M7.5 3.3v2.2M4.3 9.3c1.4 3 3.9 5.3 6.9 6.3M11 5.5c-1 4.2-4 7.8-8.2 9.6"/><path d="M14 21l4-9 4 9M15.2 18h5.6"/></svg>',
-    crown: '<svg viewBox="0 0 24 24"><path d="M3 9l3.5 3L12 5l5.5 7L21 9l-2 9H5L3 9Z" fill="#ffcf3f" stroke="#e0a300" stroke-width=".7" stroke-linejoin="round"/><circle cx="6.5" cy="9" r="1.3" fill="#fff4cf"/><circle cx="12" cy="6.4" r="1.3" fill="#fff4cf"/><circle cx="17.5" cy="9" r="1.3" fill="#fff4cf"/></svg>',
-    gemDecor: '<svg viewBox="0 0 24 24"><path d="M4 9 8 4h8l4 5-9.5 11.5L4 9Z" fill="#ef5bb5" stroke="#c72e8b" stroke-width=".6" stroke-linejoin="round"/><path d="M4 9h16M9.5 9 12 4l2.5 5M12 4l-3 5 3 11.5 3-11.5-3-5Z" stroke="#ffdcf0" stroke-width=".5" opacity=".8"/></svg>',
-    starDecor: '<svg viewBox="0 0 24 24"><path d="m12 2 2.6 6.6L21 11l-6.4 2.4L12 20l-2.6-6.6L3 11l6.4-2.4L12 2Z" fill="#f6b51f" stroke="#e0940a" stroke-width=".6"/></svg>',
-    mushroomDecor: '<svg viewBox="0 0 24 24"><path d="M4 11c0-4.4 3.6-8 8-8s8 3.6 8 8H4Z" fill="#ef4b5f" stroke="#c22f42" stroke-width=".6"/><circle cx="8.5" cy="8.5" r="1.1" fill="#fff"/><circle cx="13.5" cy="6.5" r="1" fill="#fff"/><circle cx="16.5" cy="9.5" r=".9" fill="#fff"/><path d="M9 11h6l-.7 8a1.8 1.8 0 0 1-1.8 1.6h-1a1.8 1.8 0 0 1-1.8-1.6L9 11Z" fill="#fff4e6" stroke="#e3d3b8" stroke-width=".5"/></svg>',
-    chestDecor: '<svg viewBox="0 0 24 24"><rect x="3" y="10" width="18" height="9" rx="1.4" fill="#a9691f" stroke="#7a4a12" stroke-width=".6"/><path d="M3 10a9 5 0 0 1 18 0" fill="#c98330" stroke="#7a4a12" stroke-width=".6"/><rect x="10.4" y="9.6" width="3.2" height="3" rx=".6" fill="#ffd23f" stroke="#c79600" stroke-width=".5"/><path d="M3 13h18" stroke="#7a4a12" stroke-width=".6"/></svg>',
-    sparkleDecor: '<svg viewBox="0 0 24 24"><path d="M12 2c.6 4 2.4 7.4 6 9-3.6 1.6-5.4 5-6 9-.6-4-2.4-7.4-6-9 3.6-1.6 5.4-5 6-9Z" fill="#9d62ff"/><circle cx="19" cy="5" r="1.6" fill="#ef5bb5"/></svg>',
-    heartBubbleDecor: '<svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H10l-4 3v-3H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="#fff" stroke="#e3ddf5" stroke-width=".6"/><path d="M12 13.5s-4-2.2-4-5a2.3 2.3 0 0 1 4-1.5A2.3 2.3 0 0 1 16 8.5c0 2.8-4 5-4 5Z" fill="#ef5bb5"/></svg>',
-    cloudDecor: '<svg viewBox="0 0 32 20"><g fill="#fff" stroke="#ded6f5" stroke-width=".6"><rect x="4" y="8" width="8" height="8"/><rect x="10" y="4" width="8" height="12"/><rect x="16" y="8" width="8" height="8"/><rect x="0" y="12" width="32" height="4"/></g></svg>',
-    blockDecor: '<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#ffcf3f" stroke="#c98a00" stroke-width="1.4"/><text x="12" y="17" font-family="monospace" font-weight="900" font-size="13" fill="#8a5c00" text-anchor="middle">?</text></svg>',
-    coinDecor: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffd23f" stroke="#c79600" stroke-width="1.4"/><circle cx="12" cy="12" r="5.4" fill="none" stroke="#c79600" stroke-width="1.1"/></svg>',
-    checkerDecor: '<svg viewBox="0 0 40 40"><g fill="#8b5cf6"><rect x="0" y="0" width="8" height="8"/><rect x="16" y="0" width="8" height="8"/><rect x="8" y="8" width="8" height="8"/><rect x="24" y="8" width="8" height="8"/><rect x="0" y="16" width="8" height="8"/><rect x="16" y="16" width="8" height="8"/><rect x="8" y="24" width="8" height="8"/><rect x="24" y="24" width="8" height="8"/></g></svg>',
-    pixelGuyDecor: '<svg viewBox="0 0 24 32"><rect x="6" y="0" width="12" height="8" fill="#5a3b22"/><rect x="6" y="8" width="12" height="8" fill="#f4c299"/><rect x="4" y="16" width="16" height="12" fill="#3971f6"/><rect x="4" y="28" width="6" height="4" fill="#2a2a33"/><rect x="14" y="28" width="6" height="4" fill="#2a2a33"/></svg>'
-  };
-
-  const projects = [
-    {
-      id: 'aether', category: 'Indie Games', tone: 'purple', likes: 143,
-      title: 'Aether — A Hand-Drawn 2D Adventure from Assam',
-      desc: 'A story-driven puzzle-adventure about a girl restoring a fractured world.',
-      story: 'A hand-painted 2D adventure blending Assamese folk art with puzzle-driven exploration.',
-      quote: 'Every background in Aether is hand-painted first, then animated frame by frame. We wanted the world to feel like a living folk tale, not a generic pixel forest.',
-      creator: 'Ananya Das', creatorKey: 'ananya-das', avatar: null,
-      raised: 245000, goal: 500000, backers: 143, days: 24, image: 'assets/gaming.jpg',
-      accountAge: 210, previousProjects: 3, deliveries: 3, lastUpdate: '2026-07-30'
-    },
-    {
-      id: 'synthwave', category: 'Music', tone: 'pink', likes: 87,
-      title: 'Synthwave Mumbai — An Original Soundtrack Album',
-      desc: '12-track retro-futurist album blending synthwave with classical Indian textures.',
-      story: 'A 12-track concept album recorded across three studios in Mumbai over eight months.',
-      quote: 'I wanted synthwave that actually sounds like it grew up on a diet of Bollywood strings, not just another neon-city pastiche.',
-      creator: 'Rohan Mehta', creatorKey: 'rohan-mehta', avatar: null,
-      raised: 118000, goal: 150000, backers: 87, days: 16, image: null,
-      accountAge: 150, previousProjects: 2, deliveries: 2, lastUpdate: '2026-08-01'
-    },
-    {
-      id: 'hampi-vr', category: 'Animation', tone: 'pink', likes: 312,
-      title: 'VR Heritage Walk — Hampi in 3D',
-      desc: 'An immersive VR experience recreating the ruins of Hampi for students and travellers.',
-      story: 'A VR experience reconstructing 15th-century Hampi using photogrammetry.',
-      quote: 'Hampi deserves to be experienced by everyone, not just those who can travel. This VR build recreates the ruins in stunning 3D.',
-      creator: 'Vikram Rao', creatorKey: 'vikram-rao', avatar: null,
-      raised: 760000, goal: 1200000, backers: 312, days: 53, image: 'assets/office.jpg',
-      accountAge: 380, previousProjects: 4, deliveries: 4, lastUpdate: '2026-08-08'
-    },
-    {
-      id: 'solar-sentinel', category: 'Technology', tone: 'blue', likes: 261,
-      title: 'Solar Sentinel — Open-Source IoT Weather Station',
-      desc: 'Affordable, solar-powered weather stations designed for Indian farmers.',
-      story: 'An open-hardware weather station built to survive monsoon fields at a fraction of import cost.',
-      quote: 'Commercial weather stations cost more than most smallholder farmers earn in a season. Solar Sentinel is fully open-source, repairable, and built from parts available in any local hardware market.',
-      creator: 'Karthik Iyer', creatorKey: 'karthik-iyer', avatar: null,
-      raised: 534000, goal: 800000, backers: 261, days: 42, image: 'assets/solar.jpg',
-      accountAge: 410, previousProjects: 5, deliveries: 5, lastUpdate: '2026-08-05'
-    }
-  ];
-
-  const creators = [
-    {key:'ananya-das', name:'Ananya Das', handle:'@ananyadas', role:'2D Game Artist & Indie Developer', location:'Guwahati, Assam', projects:2, followers:'4,820', avatar:null, rating:'4.9', orders:38},
-    {key:'rohan-mehta', name:'Rohan Mehta', handle:'@rohansynth', role:'Music Producer · Synthwave & Classical', location:'Mumbai, Maharashtra', projects:1, followers:'3,100', avatar:null, rating:'4.8', orders:25},
-    {key:'karthik-iyer', name:'Karthik Iyer', handle:'@karthikbuilds', role:'Hardware Hacker · IoT & Embedded', location:'Coimbatore, Tamil Nadu', projects:3, followers:'6,240', avatar:null, rating:'4.9', orders:44},
-    {key:'vikram-rao', name:'Vikram Rao', handle:'@vikramvr', role:'3D Artist · VR & Photogrammetry', location:'Bengaluru, Karnataka', projects:2, followers:'5,460', avatar:null, rating:'5.0', orders:31},
-    {key:'priya-sharma', name:'Priya Sharma', handle:'@priyabuilds', role:'Indie App Developer · EdTech', location:'Pune, Maharashtra', projects:4, followers:'3,780', avatar:null, rating:'4.8', orders:18},
-    {key:'meera-nair', name:'Meera Nair', handle:'@meeradraws', role:'Illustrator · Watercolor & Comics', location:'Kochi, Kerala', projects:2, followers:'7,120', avatar:null, rating:'4.9', orders:29}
-  ];
-
-  const services = [
-    {key:'unity-game-development', title:'Unity Game Development — 2D & 3D', creator:'Ananya Das', creatorKey:'ananya-das', avatar:null, image:'assets/service-game.jpg', price:1500, rating:'4.9', days:7, location:'Guwahati, Assam', category:'Programming', desc:'Full-stack Unity development for 2D and 3D games. C# scripting, level design, optimization and polish. Includes source code.', tags:['Unity','C#','2D Games','3D Games','Game Design']},
-    {key:'3d-character-modeling', title:'3D Character Modeling & Rigging', creator:'Vikram Rao', creatorKey:'vikram-rao', avatar:null, image:null, price:2500, rating:'5.0', days:10, location:'Bengaluru, Karnataka', category:'3D & Animation', desc:'Production-ready stylized and realistic 3D characters with clean topology, UVs and rigging.', tags:['Blender','Rigging','Character Art','3D']},
-    {key:'trailer-editing', title:'Game Trailer Editing & Sound Design', creator:'Rohan Mehta', creatorKey:'rohan-mehta', avatar:null, image:'assets/gaming.jpg', price:2000, rating:'4.8', days:5, location:'Mumbai, Maharashtra', category:'Video & Audio', desc:'Punchy trailers, gameplay edits, sound design and final mix for indie game launches.', tags:['Editing','Sound Design','Trailer','Mixing']},
-    {key:'vr-prototype', title:'Interactive VR Prototype for Heritage & Education', creator:'Vikram Rao', creatorKey:'vikram-rao', avatar:null, image:'assets/office.jpg', price:4500, rating:'5.0', days:14, location:'Bengaluru, Karnataka', category:'XR', desc:'Rapid VR prototype development for culture, education and interactive exhibitions.', tags:['VR','Unity','3D','Prototype']}
-  ];
-
-  const stories = [
-    {quote:'I raised ₹2.45L for my 2D adventure on DevFund India. The UPI flow meant my first backer paid in under a minute. Within a week I had 143 backers and the funds to finish my game.', creator:'Ananya Das', role:'Indie Game Developer · Guwahati', avatar:null},
-    {quote:'I listed IoT weather stations as a project and freelancing as a service. The freelance orders funded my R&D while the campaign funded production. The reviews built my reputation fast.', creator:'Karthik Iyer', role:'Hardware Hacker · Coimbatore', avatar:null},
-    {quote:'As a first-time creator, the Project Trust panel actually helped me. Backers could see I was new — and still chose to support my comic because the risks were honestly stated.', creator:'Meera Nair', role:'Illustrator · Kochi', avatar:null}
-  ];
-
-  const creatorExtras = {
-    'ananya-das': {
-      bio: 'Self-taught 2D artist and Unity developer from Guwahati. Ananya blends Assamese folk art with hand-painted worlds — every background is painted first, then animated frame by frame.',
-      skills: ['Unity','C#','2D Animation','Photoshop','Game Design','Procreate'],
-      social: [['Portfolio','#'],['Twitter / X','#'],['YouTube','#'],['Discord','#']]
-    },
-    'rohan-mehta': {
-      bio: 'Music producer and sound designer based in Mumbai, recording original soundtracks that blend synthwave textures with classical Indian strings for games and film.',
-      skills: ['Ableton Live','Sound Design','Mixing & Mastering','Foley','Trailer Scoring'],
-      social: [['SoundCloud','#'],['Spotify','#'],['Instagram','#'],['Discord','#']]
-    },
-    'karthik-iyer': {
-      bio: 'Hardware hacker and embedded-systems engineer in Coimbatore, building affordable open-source IoT devices for real-world problems like agriculture and climate monitoring.',
-      skills: ['Embedded C','KiCad','IoT','Solar Electronics','3D Printing','Rust'],
-      social: [['GitHub','#'],['Hackaday','#'],['LinkedIn','#'],['YouTube','#']]
-    },
-    'vikram-rao': {
-      bio: '3D artist and XR developer in Bengaluru, reconstructing real-world heritage sites and characters using photogrammetry and real-time engines for immersive VR experiences.',
-      skills: ['Unity','Blender','Photogrammetry','VR / XR','Rigging','Substance Painter'],
-      social: [['ArtStation','#'],['LinkedIn','#'],['YouTube','#'],['Sketchfab','#']]
-    },
-    'priya-sharma': {
-      bio: 'Indie app developer in Pune building playful EdTech tools for Indian classrooms — designed to run well even on low-end Android devices and patchy connections.',
-      skills: ['Flutter','Kotlin','Firebase','UI/UX Design','EdTech'],
-      social: [['GitHub','#'],['LinkedIn','#'],['Portfolio','#'],['Twitter / X','#']]
-    },
-    'meera-nair': {
-      bio: "Illustrator and comic artist in Kochi, painting watercolor worlds and serialized comics inspired by Kerala's coastline, folklore and everyday life.",
-      skills: ['Watercolor','Procreate','Comic Layout','Character Design','Storyboarding'],
-      social: [['Instagram','#'],['ArtStation','#'],['Webtoon','#'],['Patreon','#']]
-    }
-  };
-
-  const creatorTestimonials = {
-    'ananya-das': [
-      {name:'Aditya K.', role:'Backer', quote:'Backed Aether on day one — the art style alone was worth funding. Updates come regularly and this clearly is a labour of love.'},
-      {name:'Priyanka R.', role:'Freelance client', quote:'Hired Ananya for a Unity job. Clean code, delivered early, and every decision was explained clearly.'}
-    ],
-    'rohan-mehta': [
-      {name:'Sana W.', role:'Backer', quote:'The Mumbai synthwave album is unlike anything else funded here — genuinely original, not a generic neon-city knockoff.'},
-      {name:'Studio Retro', role:'Freelance client', quote:'Rohan scored our launch trailer in five days flat. Mix quality was broadcast-ready on the first pass.'}
-    ],
-    'karthik-iyer': [
-      {name:'Farm Collective AP', role:'Buyer', quote:'Ordered 12 Solar Sentinel units for a pilot. They survived the first monsoon without a single failure.'},
-      {name:'Divya N.', role:'Backer', quote:'Open hardware, real documentation, real delivery. Exactly the kind of project worth funding.'}
-    ],
-    'vikram-rao': [
-      {name:'Heritage Trust Karnataka', role:'Buyer', quote:'The Hampi VR walk is being used in three schools now. Students who can never visit can finally experience it.'},
-      {name:'Nikhil J.', role:'Backer', quote:'Backed for the tech demo, stayed for how fast Vikram ships updates. Photogrammetry work is top tier.'}
-    ],
-    'priya-sharma': [
-      {name:'Govt. School, Pune', role:'Buyer', quote:'The app works fine even on our oldest classroom tablets — that alone made it worth adopting.'},
-      {name:'Rahul M.', role:'Freelance client', quote:'Priya turned our messy spec into a working prototype in under two weeks.'}
-    ],
-    'meera-nair': [
-      {name:'Anjali S.', role:'Backer', quote:"Meera's watercolor comics feel like nothing else on the platform. Backed her Patreon the same day I found her page."},
-      {name:'Coastal Press', role:'Freelance client', quote:'Delivered a full 12-page comic on schedule with zero revisions needed.'}
-    ]
-  };
-
-  const faqs = [
-    ['Is backing a project an investment?','No. DevFund India is designed around reward-based crowdfunding or voluntary support. Backers support creators and may receive stated rewards; backing is not equity or a guarantee of financial returns.'],
-    ['How do payments work?','The production implementation should connect UPI, cards, net banking and wallets through a regulated payment provider. The interface is already designed to explain each transaction clearly.'],
-    ['How does verification work?','Creators can earn separate Email, Phone, Identity and Payment Verified badges. The UI keeps each signal explicit so a single badge never implies more than was actually checked.'],
-    ['What fees does DevFund India charge?','This prototype intentionally does not hard-code a commercial fee. Add your approved platform fee, payment-processing fee and tax treatment in the production pricing policy.'],
-    ["What if a project doesn't deliver?",'Project risk is disclosed before backing. Production should include reporting, creator updates, dispute handling and refund rules aligned with the payment flow and your legal terms.'],
-    ['Can I be both a creator and a backer?','Yes. The product is designed around a creator ecosystem where the same account can discover, support, hire and publish work.']
-  ];
-
-  const fmt = value => new Intl.NumberFormat('en-IN').format(value);
-  const percent = p => Math.min(100, Math.round((p.raised / p.goal) * 100));
-
-  function avatarMarkup(src, name, cls='avatar-xs') {
-    if (src) return `<img class="${cls}" src="${src}" alt="${name}" loading="lazy">`;
-    return `<span class="${cls}" aria-hidden="true">${name.charAt(0)}</span>`;
-  }
-
-  function verificationBadges() {
-    return `
-      <span class="badge">${icons.mail} Email Verified</span>
-      <span class="badge">${icons.phone} Phone Verified</span>
-      <span class="badge">${icons.shield} Identity Verified</span>
-      <span class="badge">${icons.badge} Payment Verified</span>`;
-  }
-
-  function projectCard(p) {
-    const media = p.image
-      ? `<img src="${p.image}" alt="${p.title}" loading="lazy">`
-      : `<div class="placeholder-icon" aria-hidden="true"></div>`;
-    return `
-      <article class="project-card glass-card glow-card" data-project="${p.id}">
-        <div class="project-media ${p.image ? '' : 'placeholder'}">
-          ${media}
-          <span class="category-chip media-chip">${p.category}</span>
-          <span class="like-chip">${icons.heart}${p.likes}</span>
-        </div>
-        <div class="project-body">
-          <h3>${p.title}</h3>
-          <p class="project-desc">${p.desc}</p>
-          <div class="creator-mini">
-            ${avatarMarkup(p.avatar,p.creator)}
-            <span>${p.creator}</span><span class="verified">Verified</span>
-          </div>
-          <div class="money-row"><b>₹${fmt(p.raised)} raised</b><span>${percent(p)}% of ₹${fmt(p.goal)}</span></div>
-          <div class="progress"><span style="width:${percent(p)}%"></span></div>
-          <div class="card-foot"><strong>${p.backers} backers</strong><span>${p.days} days left</span></div>
-        </div>
-      </article>`;
-  }
-
-  function creatorCard(c) {
-    return `
-      <article class="creator-card glass-card glow-card" data-creator="${c.key}">
-        <div class="avatar-lg-wrap">
-          ${avatarMarkup(c.avatar,c.name,'avatar-lg')}
-          <span class="verified-dot">✓</span>
-        </div>
-        <h3>${c.name}</h3>
-        <div class="creator-handle">${c.handle}</div>
-        <p class="creator-role">${c.role}</p>
-        <div class="creator-location">⌾ &nbsp;${c.location}</div>
-        <div class="creator-meta"><span><span class="star">★</span> ${c.projects} projects</span><span>${c.followers} followers</span></div>
-        <div class="badges">${verificationBadges()}</div>
-      </article>`;
-  }
-
-  function serviceCard(s) {
-    const image = s.image ? `<img src="${s.image}" alt="${s.title}" loading="lazy">` : `<div class="placeholder-icon" aria-hidden="true"></div>`;
-    return `
-      <article class="service-card glass-card glow-card" data-service="${s.key}">
-        <div class="service-media ${s.image ? '' : 'project-media placeholder'}">${image}</div>
-        <div class="service-body">
-          <h3>${s.title}</h3>
-          <div class="creator-mini">${avatarMarkup(s.avatar,s.creator)}<span>${s.creator}</span><span class="verified">Verified</span></div>
-          <div class="service-meta"><span>★ ${s.rating}</span><span>◷ ${s.days}d</span><span>⌾ ${s.location}</span></div>
-          <div class="price-row"><span>Starting at</span><strong>₹${fmt(s.price)}</strong></div>
-        </div>
-      </article>`;
-  }
-
-  function sectionDecor(pos, size, icon) {
-    return `<span class="section-decor ${pos} ${size}" aria-hidden="true">${icon}</span>`;
-  }
-
-  function sectionMesh() { return ''; }
-
-  function pixelField() {
-    const colors = ['#f6b51f','#ef5bb5','#9d62ff','#06b981','#3971f6','#ff8a5c'];
-    const dots = [
-      [3,6,10],[7,14,8],[93,10,9],[96,22,11],[2,30,7],[95,38,8],[4,46,9],[92,52,10],
-      [6,60,8],[94,66,9],[3,74,10],[96,80,7],[5,88,9],[93,92,8],[8,20,6],[90,4,7]
-    ];
-    return `<div class="pixel-field" aria-hidden="true">${dots.map((d,i)=>`<span style="left:${d[0]}%;top:${d[1]}%;width:${d[2]}px;height:${d[2]}px;background:${colors[i%colors.length]};animation-delay:-${(i*0.4).toFixed(1)}s"></span>`).join('')}</div>`;
-  }
-
-  // FIXED: Moved entirely outside of .page-shell so images can bleed off screen
-  function scatteredArt() {
-    const arts = [
-      icons.chestDecor, icons.mushroomDecor, icons.gemDecor,
-      icons.starDecor, icons.sparkleDecor, icons.heartBubbleDecor,
-      icons.coinDecor, icons.blockDecor
-    ];
+.site-header{position:sticky;top:0;z-index:50;padding:10px clamp(16px,2.4vw,36px) 0;transition:.25s ease;transform:translateZ(0);backface-visibility:hidden;isolation:isolate}
+.header-shell{height:var(--header-h);max-width:1440px;margin:0 auto;border-radius:26px;padding:0 22px 0 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;transition:.28s ease}
+.glass-nav{
+  background:rgba(255,255,255,.76);
+  backdrop-filter:blur(24px) saturate(165%);
+  -webkit-backdrop-filter:blur(24px) saturate(165%);
+  border:1px solid rgba(255,255,255,.78);
+  box-shadow:0 10px 34px rgba(59,48,102,.08),inset 0 1px 0 rgba(255,255,255,.92)
+}
+.site-header.scrolled .header-shell{height:72px;border-radius:20px;box-shadow:0 12px 38px rgba(58,45,107,.13)}
+.brand{justify-self:start;display:inline-flex;align-items:center;gap:10px;font-size:20px;font-weight:800;letter-spacing:-.04em;white-space:nowrap}
+.brand strong{color:var(--purple)}
+.brand-mark{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:white;background:linear-gradient(135deg,#8b5cf6,#4f46e5);box-shadow:0 9px 22px rgba(91,67,223,.26),inset 0 1px 0 rgba(255,255,255,.28)}
+.brand-mark svg{width:24px;height:24px}
+.desktop-nav{display:flex;align-items:center;gap:4px;padding:6px;border-radius:999px;background:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.5)}
+.desktop-nav a,.nav-link-button{border:0;background:transparent;padding:10px 16px;border-radius:999px;font-weight:650;font-size:14.5px;color:#696874;cursor:pointer;transition:.2s ease}
+.desktop-nav a:hover,.nav-link-button:hover{color:var(--ink);background:rgba(255,255,255,.72);box-shadow:0 4px 15px rgba(60,50,99,.08),0 0 16px rgba(139,92,246,.18)}
+.header-actions{justify-self:end;display:flex;align-items:center;gap:11px}
+.icon-btn{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;border:1px solid transparent;background:transparent;cursor:pointer;transition:.2s ease}
+.icon-btn:hover{background:rgba(255,255,255,.7);border-color:rgba(80,59,137,.1);box-shadow:0 8px 18px rgba(65,54,100,.08)}
+.icon-btn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.header-actions .btn-primary{min-height:44px;padding:0 20px;font-size:14px}
+.mobile-menu-btn{display:none}
+.mobile-menu-backdrop{position:fixed;inset:0;z-index:49;background:rgba(15,12,28,.38);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .22s ease}
+.mobile-menu-backdrop.show{opacity:1;pointer-events:auto}
+.mobile-menu {
+  position: absolute;
+  top: 96px;
+  left: 16px;
+  right: 16px;
+  max-width: 520px;
+  margin: auto;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+  z-index: 51;
+  background: rgba(255, 255, 255, .97);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+ box-shadow: 0 24px 60px rgba(40, 30, 80, .28), inset 0 1px 0 rgba(255, 255, 255, .9);
   
-    let html = '<div style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; overflow:visible;">';
+  /* Add this line below to fix the boxy corners */
+  border-radius: 20px !important;
+}
+.mobile-menu a,.mobile-menu>button:not(.btn){padding:13px 14px;border:0;background:transparent;border-radius:14px;text-align:left;font-weight:700;color:var(--ink)}
+.mobile-menu a:hover,.mobile-menu>button:not(.btn):hover{background:rgba(111,63,245,.1)}
+
+.btn{min-height:48px;border:0;border-radius:14px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:800;cursor:pointer;transition:box-shadow .22s ease,background .22s ease,border-color .22s ease;position:relative;isolation:isolate}
+/* Magnetic buttons: JS writes --mag-x/--mag-y/--mag-scale, this is what actually moves them.
+   Spring-like cubic-bezier gives the smooth "pull then settle" magnetic feel. */
+.magnetic{
+  --mag-x:0px;--mag-y:0px;--mag-scale:1;--mag-rot:0deg;
+  transform:translate3d(var(--mag-x),var(--mag-y),0) scale(var(--mag-scale)) rotate(var(--mag-rot));
+  transition:transform .65s cubic-bezier(.34,1.56,.64,1),box-shadow .3s ease,background .3s ease,border-color .3s ease;
+  will-change:transform;
+}
+.icon-btn.magnetic,.brand.magnetic{transition:transform .6s cubic-bezier(.34,1.56,.64,1),background .25s ease,box-shadow .25s ease}
+.btn-primary{color:#fff;background:linear-gradient(135deg,#7d3df7 0%,#4d45e9 100%);box-shadow:0 12px 26px rgba(89,61,230,.28),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn-primary:before{content:"";position:absolute;inset:-2px;z-index:-1;border-radius:inherit;background:linear-gradient(120deg,rgba(133,78,255,.6),rgba(63,110,246,.42),rgba(236,91,194,.4));filter:blur(12px);opacity:.25;transition:.25s ease}
+.btn-primary:hover:before{opacity:.58}
+.btn-primary:hover{box-shadow:0 14px 34px rgba(89,61,230,.36)}
+.btn-ghost{background:rgba(255,255,255,.62);border:1px solid rgba(54,48,83,.09);box-shadow:0 10px 22px rgba(67,56,112,.07),inset 0 1px 0 rgba(255,255,255,.9)}
+.btn-ghost:hover{background:rgba(255,255,255,.9);box-shadow:0 14px 28px rgba(67,56,112,.1)}
+.btn-white{background:#fff;color:var(--purple);box-shadow:0 10px 24px rgba(34,22,97,.16)}
+.btn-outline-light{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.38);color:#fff}
+
+main{min-height:70vh;outline:none}
+.page-shell{max-width:var(--max);margin:0 auto;padding:26px clamp(20px,2.4vw,36px) 64px}
+.section{padding:56px 0}
+.section-tight{padding:36px 0}
+.section-head{display:flex;justify-content:space-between;gap:22px;align-items:end;margin-bottom:28px}
+.section-head.center{text-align:center;display:block;max-width:780px;margin:0 auto 34px}
+.section-head h2{font-size:clamp(30px,3vw,46px);line-height:1;letter-spacing:-.045em;margin:0 0 9px}
+.section-head p{margin:0;color:var(--muted);font-size:17px;line-height:1.6}
+.text-link{display:inline-flex;align-items:center;gap:9px;color:var(--purple);font-weight:800;white-space:nowrap;transition:.2s ease}
+.text-link:hover{transform:translateX(3px)}
+.eyebrow{margin:0 0 8px;color:var(--purple);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}
+.muted{color:var(--muted)}
+
+.glass-card,.glass-panel{
+  background:var(--surface);
+  backdrop-filter:blur(22px) saturate(150%);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  border:1px solid rgba(255,255,255,.82);
+  box-shadow:var(--shadow-soft),inset 0 1px 0 rgba(255,255,255,.85)
+}
+.glass-panel{background:rgba(255,255,255,.82);box-shadow:var(--shadow)}
+.neu-card{
+  background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(243,242,250,.72));
+  border:1px solid rgba(255,255,255,.86);
+  box-shadow:14px 14px 34px rgba(89,76,133,.09),-12px -12px 28px rgba(255,255,255,.88),inset 1px 1px 0 rgba(255,255,255,.9)
+}
+.glow-card{position:relative;overflow:hidden;transition:transform .28s ease,box-shadow .28s ease,border-color .28s ease}
+.glow-card:after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(117,65,247,.17),transparent 70%);top:-80px;right:-80px;opacity:0;transition:.3s ease;pointer-events:none}
+.glow-card:hover{transform:translateY(-5px);border-color:rgba(119,65,244,.23);box-shadow:0 24px 55px rgba(66,50,128,.16),0 0 40px rgba(122,67,247,.08),inset 0 1px 0 rgba(255,255,255,.9)}
+.glow-card:hover:after{opacity:1}
+
+/* Hero */
+.hero{padding:48px 0 28px}
+.hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:44px;align-items:center}
+.hero-visual{position:relative}
+.hero-copy{padding:26px 0}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.58);border:1px solid rgba(118,77,237,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.9);color:#6740df;font-size:12.5px;font-weight:800}
+.pill svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+.hero h1{font-size:clamp(40px,3.9vw,60px);line-height:.98;letter-spacing:-.06em;margin:22px 0 18px;max-width:720px}
+.gradient-text{color:transparent;background:linear-gradient(110deg,#4271f2 0%,#5b54ef 43%,#843ff2 80%,#e65db6 130%);background-size:140% auto;-webkit-background-clip:text;background-clip:text;animation:gradientSlide 8s ease-in-out infinite alternate}
+@keyframes gradientSlide{to{background-position:100% 50%}}
+.hero-sub{max-width:640px;color:#72717c;font-size:17px;line-height:1.55;margin:0}
+.hero-actions{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+.hero-actions .btn{min-width:170px;min-height:44px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:32px}
+.stat-card{min-height:96px;border-radius:18px;padding:16px 14px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+.stat-card:first-child{border-color:rgba(213,65,173,.34);box-shadow:14px 14px 32px rgba(89,76,133,.08),-11px -11px 24px rgba(255,255,255,.92),0 0 28px rgba(221,72,184,.08)}
+.stat-value{font-size:22px;line-height:1;font-weight:900;letter-spacing:-.035em;margin-bottom:6px}
+.stat-label{font-size:12px;color:var(--muted);line-height:1.35}
+.hero-feature{height:460px;border-radius:28px;position:relative;overflow:hidden;background:#15151b;box-shadow:0 35px 75px rgba(29,24,53,.26),0 0 60px rgba(93,70,240,.08);transform:translateZ(0);isolation:isolate}
+.hero-feature>img{width:100%;height:100%;object-fit:cover;filter:saturate(.92) contrast(1.05)}
+.hero-feature:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(7,7,10,.08) 50%,rgba(4,4,7,.94) 100%);z-index:1}
+.hero-feature-content{position:absolute;left:27px;right:27px;bottom:25px;color:white;z-index:2}
+.hero-feature-content h3{font-size:24px;margin:12px 0 5px;letter-spacing:-.03em}
+.hero-feature-content p{margin:0;color:rgba(255,255,255,.72);font-size:14px}
+.category-chip{display:inline-flex;padding:7px 12px;border-radius:999px;background:linear-gradient(135deg,#7b42f4,#8b4cf6);color:#fff;font-size:12px;font-weight:900}
+.progress-row{display:flex;justify-content:space-between;gap:18px;margin-top:22px;color:rgba(255,255,255,.72);font-size:13px}
+.progress{height:10px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;margin-top:10px}
+.progress>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8e4bf6,#584df1);box-shadow:0 0 18px rgba(127,67,244,.55)}
+.floating-verify {
+  position: absolute;
+  z-index: 3;
+  left: -20px;
+  bottom: 450px; /* Pushed further down */
+  border-radius: 20px;
+  padding: 15px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 210px;
   
-    for (let i = 0; i < 30; i++) {
-      const icon = arts[i % arts.length];
-      const top = 10 + (Math.random() * 85);
-      const left = 2 + (Math.random() * 90);
-      const size = 25 + (Math.random() * 30);
-      const rot = Math.random() * 90 - 45;
+  /* Increased Transparency */
+  background: rgba(255, 255, 255, 0.50); /* Lowered opacity for more transparency */
+  backdrop-filter: blur(25px) saturate(200%);
+  -webkit-backdrop-filter: blur(25px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.6); /* Softened border slightly */
+  box-shadow: 0 20px 45px rgba(30, 24, 55, 0.18), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  transform: translateZ(0);
   
-      html += `<span class="scatter-icon" style="position:absolute; top:${top}%; left:${left}%; width:${size}px; height:${size}px; transform:rotate(${rot}deg); opacity:0.6; filter:drop-shadow(0 8px 16px rgba(60,40,110,0.12));">${icon}</span>`;
-    }
+  /* Gentle Air-Flow Floating Animation */
+  animation: floatBadge 3.8s ease-in-out infinite alternate;
+}
+
+.floating-verify b {
+  display: block;
+  font-size: 14px;
+  color: #111219;
+  letter-spacing: -0.01em;
+}
+
+.floating-verify small {
+  color: #555460;
+  font-weight: 500;
+}
+
+@keyframes floatBadge {
+  0% { translate: 0 0px; }
+  100% { translate: 0 -8px; }
+}
+.verify-icon{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--green);background:#dffcf1;box-shadow:inset 0 0 0 1px rgba(5,187,130,.13)}
+.verify-icon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9}
+
+/* project cards */
+.cards-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.cards-4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.project-card{border-radius:26px;overflow:hidden;cursor:pointer;min-width:0}
+.project-media{height:255px;position:relative;overflow:hidden;background:linear-gradient(135deg,#f0eef7,#eceef4)}
+.project-media img{width:100%;height:100%;object-fit:cover;transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+.project-card:hover .project-media img{transform:scale(1.045)}
+.project-media.placeholder{display:grid;place-items:center;background:linear-gradient(135deg,#f7f3ff,#edf4ff)}
+.placeholder-icon{width:86px;height:67px;border-radius:16px;background:linear-gradient(145deg,#e8e6ef,#d6d4de);position:relative;box-shadow:inset 5px 5px 10px rgba(92,83,120,.07),inset -5px -5px 11px rgba(255,255,255,.72)}
+.placeholder-icon:before{content:"";position:absolute;left:15px;top:13px;width:12px;height:12px;border-radius:50%;background:#a9a6b2}
+.placeholder-icon:after{content:"";position:absolute;left:18px;right:15px;bottom:14px;height:30px;clip-path:polygon(0 100%,40% 38%,58% 60%,77% 30%,100% 100%);background:#aaa7b2}
+.media-chip{position:absolute;left:14px;top:14px;z-index:2}
+.like-chip{position:absolute;right:14px;top:14px;z-index:2;background:rgba(255,255,255,.88);backdrop-filter:blur(10px);padding:7px 11px;border-radius:999px;font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px;box-shadow:0 6px 18px rgba(35,31,51,.08)}
+.like-chip svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}
+.project-body{padding:21px 21px 19px}
+.project-body h3{font-size:18px;line-height:1.25;letter-spacing:-.025em;margin:0 0 7px}
+.project-desc{color:var(--muted);font-size:13px;line-height:1.45;margin:0 0 15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.creator-mini{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px}
+.avatar-xs{width:29px;height:29px;border-radius:50%;object-fit:cover;background:#7757f5;color:#fff;display:grid;place-items:center;font-weight:800}
+.verified{color:#049b70;font-weight:800;margin-left:2px}
+.money-row{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-top:16px;font-size:12px}.money-row b{font-size:16px}.money-row span{color:var(--muted)}
+.project-card .progress{height:8px;background:rgba(83,68,130,.07);margin-top:9px}.project-card .progress>span{background:linear-gradient(90deg,#8a4cf7,#5550ea)}
+.card-foot{display:flex;justify-content:space-between;gap:12px;color:#60606a;font-size:12px;margin-top:14px}.card-foot strong{color:var(--ink)}
+
+/* creators */
+.creator-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.creator-card{border-radius:26px;padding:24px;text-align:center;cursor:pointer;min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.avatar-lg-wrap{position:relative;margin-bottom:14px}.avatar-lg{width:98px;height:98px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.85);box-shadow:0 14px 30px rgba(51,42,82,.13);display:grid;place-items:center;background:linear-gradient(135deg,#eee8ff,#e4eaff);color:#6f3ff5;font-weight:900;font-size:28px}
+.verified-dot{position:absolute;right:2px;bottom:3px;width:25px;height:25px;border-radius:50%;background:#fff;border:2px solid #0ac28b;color:#0ac28b;display:grid;place-items:center;font-size:14px;font-weight:900}
+.creator-card h3{margin:0;font-size:18px;letter-spacing:-.02em}.creator-handle{color:var(--muted);font-size:13px;margin:4px 0 7px}.creator-role{color:#777681;font-size:14px;margin:0 0 9px}.creator-location{color:#777681;font-size:12px}.creator-meta{display:flex;gap:18px;color:#777681;font-size:12px;margin-top:16px}.creator-meta .star{color:var(--amber)}
+.badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+.badge{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(5,188,132,.33);background:rgba(224,255,246,.76);color:#07845f;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:750;white-space:nowrap}
+.badge svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}
+
+/* services */
+.service-card{border-radius:25px;overflow:hidden;cursor:pointer}
+.service-media{height:240px;background:linear-gradient(145deg,#f7f4ff,#eef0f8);overflow:hidden;position:relative}
+.service-media img{width:100%;height:100%;object-fit:cover;transition:.5s ease}
+.service-card:hover img{transform:scale(1.04)}
+.service-body{padding:18px 19px 20px}.service-body h3{margin:0 0 11px;font-size:17px;line-height:1.25}.service-meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;color:#73717d;font-size:12px}.price-row{border-top:1px solid rgba(68,52,116,.08);margin-top:16px;padding-top:16px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}.price-row strong{font-size:19px;color:var(--purple)}
+
+/* bento */
+.bento-grid{display:grid;grid-template-columns:1.12fr 1fr;grid-template-rows:210px 210px;gap:20px}
+.bento-card{border-radius:26px;padding:28px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
+.bento-card.feature{grid-row:1/3;border:1px solid rgba(119,64,245,.52);box-shadow:0 20px 48px rgba(91,63,199,.14),0 0 38px rgba(210,81,210,.12),inset 0 0 0 1px rgba(255,255,255,.9)}
+.bento-card h3{font-size:22px;margin:0 0 8px;letter-spacing:-.03em}.bento-card p{margin:0;color:var(--muted);line-height:1.55}
+.bento-icon{position:absolute;left:28px;top:28px;width:55px;height:55px;border-radius:16px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#8344f6,#4e49ec);box-shadow:0 12px 24px rgba(89,57,228,.28)}
+.bento-icon svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.8}
+.bento-number{position:absolute;right:24px;top:18px;font-size:74px;line-height:1;font-weight:900;color:rgba(124,70,246,.08)}
+
+/* trust */
+.trust-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}.trust-card{border-radius:24px;padding:26px 28px;display:flex;gap:18px;align-items:flex-start}.trust-card .verify-icon{flex:0 0 auto;width:50px;height:50px;border-radius:15px}.trust-card h3{font-size:17px;margin:4px 0 7px}.trust-card p{margin:0;color:var(--muted);line-height:1.55;font-size:14px}.trust-badges{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+
+/* stories */
+.stories-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}.story-card{border-radius:25px;padding:29px;min-height:290px;display:flex;flex-direction:column}.quote-mark{font-size:55px;line-height:.7;color:#8955f6;font-family:Georgia,serif}.story-card blockquote{margin:18px 0 26px;font-size:16px;line-height:1.6;flex:1}.story-person{border-top:1px solid rgba(72,54,121,.1);padding-top:17px;display:flex;align-items:center;gap:11px;text-align:left}.story-person img{width:45px;height:45px;border-radius:50%;object-fit:cover}.story-person b{display:block;font-size:14px}.story-person span{font-size:12px;color:var(--muted)}
+
+/* FAQ */
+.faq-wrap{max-width:920px;margin:auto}.faq-item{border-radius:18px;margin-bottom:12px;overflow:hidden}.faq-q{width:100%;border:0;background:transparent;display:flex;justify-content:space-between;gap:18px;align-items:center;text-align:left;padding:20px 22px;font-weight:800;cursor:pointer}.faq-q svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;transition:.25s ease}.faq-item.open .faq-q svg{transform:rotate(180deg)}.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease}.faq-a>div{padding:0 22px 21px;color:var(--muted);line-height:1.6;font-size:14px}
+
+/* CTA footer */
+.cta-band{border-radius:32px;padding:42px 28px;text-align:center;color:#fff;background:radial-gradient(circle at 50% -70%,rgba(255,255,255,.32),transparent 42%),linear-gradient(115deg,#7c3df2,#4339cf);box-shadow:0 26px 55px rgba(70,48,192,.24),inset 0 1px 0 rgba(255,255,255,.2);position:relative;overflow:hidden}.cta-band:after{content:"";position:absolute;width:360px;height:360px;border-radius:50%;background:rgba(231,85,205,.19);filter:blur(50px);right:-130px;bottom:-240px}.cta-band h2{font-size:clamp(32px,4vw,50px);margin:0 0 12px;letter-spacing:-.045em}.cta-band p{max-width:700px;margin:0 auto;color:rgba(255,255,255,.78);line-height:1.6}.cta-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:25px}
+.site-footer{padding:56px 0 24px;border-top:1px solid rgba(77,57,133,.08)}.footer-grid{display:grid;grid-template-columns:1.4fr repeat(4,1fr);gap:40px}.footer-brand p{color:var(--muted);max-width:360px;line-height:1.55;font-size:14px}.footer-col h4{font-size:14px;margin:4px 0 16px}.footer-col a{display:block;color:var(--muted);font-size:14px;margin:11px 0;transition:.2s}.footer-col a:hover{color:var(--purple);transform:translateX(2px)}.footer-disclaimer{border-top:1px solid rgba(77,57,133,.08);margin-top:38px;padding-top:22px;color:var(--muted);font-size:12.5px;line-height:1.65;max-width:1180px}.footer-disclaimer strong{color:#4c4a56}
+.footer-bottom{margin-top:18px;padding-top:0;display:flex;justify-content:space-between;gap:20px;color:var(--muted);font-size:12px;flex-wrap:wrap}.footer-links{display:flex;gap:18px;flex-wrap:wrap}
+.story-avatar{width:45px;height:45px;font-size:16px}
+
+/* generic route headers */
+.route-hero{padding:56px 0 30px}.route-hero-inner{border-radius:30px;padding:36px 38px;position:relative;overflow:hidden}.route-hero-inner:after{content:"";position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(121,65,245,.13);filter:blur(18px);right:-80px;top:-150px}.route-hero h1{font-size:clamp(38px,4.8vw,64px);letter-spacing:-.055em;line-height:1;margin:0 0 12px}.route-hero p{margin:0;color:var(--muted);max-width:700px;font-size:17px;line-height:1.6}.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:25px}.filter-chip{border:1px solid rgba(74,56,126,.1);background:rgba(255,255,255,.58);border-radius:999px;padding:9px 13px;font-size:12px;font-weight:800;cursor:pointer}.filter-chip.active,.filter-chip:hover{background:#fff;color:var(--purple);box-shadow:0 8px 18px rgba(63,51,104,.08)}
+
+/* Creator detail */
+.profile-cover{height:210px;border-radius:30px 30px 0 0;background:radial-gradient(circle at 20% 0%,rgba(143,85,255,.85),transparent 28%),linear-gradient(120deg,#5e3eea,#3f33c8);position:relative;overflow:hidden}.profile-cover:after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent,rgba(255,255,255,.08),transparent);transform:translateX(-100%);animation:shine 6s infinite}.profile-shell{margin-top:-64px;position:relative;z-index:2;padding:0 38px}
+
+/* Profile top — bento grid */
+.profile-bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:96px;gap:16px}
+.pb-tile{position:relative;overflow:hidden;border-radius:26px;padding:22px}
+.pb-profile{grid-column:span 2;grid-row:span 2;padding:24px 26px;display:flex;flex-direction:column}
+.pb-profile-row{display:flex;justify-content:space-between;align-items:flex-start}
+.pb-avatar{width:78px;height:78px;border-radius:20px;object-fit:cover;border:3px solid rgba(255,255,255,.55);display:grid;place-items:center;background:rgba(255,255,255,.22);color:#fff;font-weight:900;font-size:26px;position:relative;z-index:1}
+.pb-icon-actions{display:flex;gap:8px;position:relative;z-index:1}
+.pb-icon-btn{width:38px;height:38px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);color:#fff}
+.pb-icon-btn svg{width:16px;height:16px}
+.pb-profile h1{font-size:27px;margin:16px 0 3px;letter-spacing:-.035em;position:relative;z-index:1}
+.pb-role{margin:0 0 8px;font-size:13px;opacity:.85;position:relative;z-index:1}
+.pb-loc{display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;opacity:.85;position:relative;z-index:1}
+.pb-loc svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
+.pb-cta{display:flex;gap:9px;margin-top:auto;padding-top:18px;position:relative;z-index:1}
+.pb-cta .btn{padding:0 16px;height:40px;font-size:13px}
+.pb-btn-ghost{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.3);color:#fff}
+.pb-metric{display:flex;flex-direction:column;justify-content:center;gap:6px}
+.pb-metric-label{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;opacity:.72}
+.pb-metric-value{font-size:26px;font-weight:900;letter-spacing:-.03em}
+.pb-verify{grid-column:span 4;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px 26px}
+.pb-verify-copy h3{margin:0 0 3px;font-size:15px}
+.pb-verify-copy p{margin:0;font-size:12px;opacity:.68}
+.pb-verify .badges{flex-wrap:wrap;justify-content:flex-end}
+
+.tabs{display:flex;gap:8px;border-bottom:1px solid rgba(73,55,126,.09);margin-top:32px}.tab{border:0;background:transparent;padding:15px 18px;font-weight:800;color:#72717c;cursor:pointer;position:relative}.tab.active{color:var(--ink)}.tab.active:after{content:"";position:absolute;height:2px;left:12px;right:12px;bottom:-1px;background:linear-gradient(90deg,#7a40f2,#e658bb)}.portfolio-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;margin-top:26px}.portfolio-card{height:330px;border-radius:24px;overflow:hidden}.portfolio-card img{width:100%;height:100%;object-fit:cover}.portfolio-card.alt{display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,255,255,.76),rgba(242,238,250,.72))}
+.analytics-title{margin:54px 0 18px;font-size:19px}
+
+/* Analytics — neumorphic bento layout */
+.neu-analytics{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.neu-col{display:grid;gap:22px}
+.neu-card{
+  background:linear-gradient(145deg,#fbfaff,#eef0f8);
+  border-radius:30px;
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:10px 10px 24px rgba(160,166,196,.38),-10px -10px 22px rgba(255,255,255,.9);
+  padding:26px;
+}
+.neu-label{font-size:12px;margin-bottom:2px}
+.neu-trust{border-color:rgba(124,71,255,.28);box-shadow:10px 10px 24px rgba(160,166,196,.38),-10px -10px 22px rgba(255,255,255,.9),0 0 0 1.5px rgba(124,71,255,.22)}
+.neu-trust-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.score-big{font-size:44px;font-weight:900;letter-spacing:-.02em}
+.score-big span{font-size:19px;color:var(--muted);font-weight:800}
+.stars{color:var(--amber);letter-spacing:2px;font-size:17px;white-space:nowrap}
+.stars-num{color:var(--ink);font-size:14px;letter-spacing:0;margin-left:3px;font-weight:800}
+.neu-bars{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:16px 20px}
+.neu-bar label{display:flex;justify-content:space-between;color:var(--muted);font-size:11.5px;margin-bottom:6px;font-weight:700}
+.neu-bar-track{height:8px;border-radius:999px;background:rgba(82,68,130,.09);box-shadow:inset 2px 2px 5px rgba(82,68,130,.14),inset -2px -2px 5px rgba(255,255,255,.7);overflow:hidden}
+.neu-bar-fill{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#8552f7,#5d55eb);transition:width 1.05s cubic-bezier(.16,.84,.44,1)}
+.neu-bar-fill.filled{width:var(--pct)}
+.neu-fill-green{background:linear-gradient(90deg,#1fdb9c,#0aa06e)}
+.neu-trust-foot{margin-top:22px;font-size:12px}
+.neu-row-2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.neu-small{display:flex;flex-direction:column}
+.neu-small b{font-size:13px}
+.neu-big-sm{font-size:30px!important;margin:8px 0 10px}
+.neu-small p{margin:0;color:var(--muted);font-size:12px}
+.neu-progress-track{margin-top:auto}
+.neu-experience{padding:24px 26px}
+.neu-exp-cells{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.neu-exp-cell{padding:18px 10px;text-align:center;border-radius:20px}
+.neu-exp-cell.neu-inset{background:linear-gradient(145deg,#eef0f8,#fbfaff);box-shadow:inset 5px 5px 10px rgba(160,166,196,.3),inset -5px -5px 10px rgba(255,255,255,.85)}
+.neu-exp-cell svg{width:20px;height:20px;stroke:var(--purple);fill:none;stroke-width:1.8;margin:0 auto}
+.neu-exp-cell b{display:block;font-size:22px;margin-top:8px}
+.neu-exp-cell small{color:var(--muted);font-size:11px}
+.neu-trend-head{display:flex;justify-content:space-between;align-items:center}
+.neu-trend-arrow{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:rgba(6,185,129,.12)}
+.neu-trend-arrow svg{width:16px;height:16px;stroke:#06b981;fill:none;stroke-width:2.1}
+.fake-chart{height:100px;position:relative;margin-top:12px;overflow:hidden}.fake-chart svg{width:100%;height:100%}
+.neu-info{display:grid;gap:14px}
+.neu-info-row{display:flex;align-items:center;gap:12px;font-size:13px;color:#4a4854}
+.neu-info-icon{width:32px;height:32px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;background:rgba(124,71,255,.1)}
+.neu-info-icon svg{width:15px;height:15px;stroke:var(--purple);fill:none;stroke-width:1.8}
+.neu-info-icon-green{background:rgba(6,185,129,.12)}
+.neu-info-icon-green svg{stroke:#06b981}
+.neu-lang-pills{display:flex;gap:7px;flex-wrap:wrap}
+.lang-pill{background:rgba(124,71,255,.1);color:var(--purple);font-weight:800;font-size:11.5px;padding:4px 11px;border-radius:999px}
+
+/* Service detail */
+.service-detail{padding-top:32px}.service-layout{display:grid;grid-template-columns:minmax(0,1.55fr) .7fr;gap:36px;align-items:start}.service-main-image{border-radius:28px;overflow:hidden;height:500px;box-shadow:0 28px 60px rgba(39,31,68,.19)}.service-main-image img{width:100%;height:100%;object-fit:cover}.service-title-row{display:flex;justify-content:space-between;gap:18px;align-items:start;margin-top:22px}.service-title-row h1{font-size:38px;letter-spacing:-.045em;margin:13px 0 10px}.tag-list{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}.tag{padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(79,60,133,.08);font-size:12px;color:#625f6e}.side-stack{display:grid;gap:18px;position:sticky;top:102px}.order-card,.seller-card{border-radius:25px;padding:26px}.order-price{font-size:30px;font-weight:900;margin:5px 0 14px}.order-meta{display:flex;gap:18px;color:var(--muted);font-size:12px;margin-bottom:20px}.order-card .btn{width:100%;margin-top:9px}.seller-head{display:flex;gap:13px;align-items:center}.seller-head img{width:50px;height:50px;border-radius:50%;object-fit:cover}.seller-head b{display:block}.seller-head span{font-size:12px;color:var(--muted)}.seller-stats{display:flex;gap:15px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:16px 0}.steps-title{font-size:20px;margin:30px 0 5px}.steps-sub{color:var(--muted);font-size:13px;margin:0 0 17px}.order-steps{display:grid;gap:10px}.order-step{padding:16px;border-radius:17px;display:flex;align-items:center;gap:14px}.step-num{width:34px;height:34px;border-radius:50%;background:#eee8ff;color:var(--purple);display:grid;place-items:center;font-weight:900}.review-card{border-radius:22px;padding:22px;margin-top:16px}.review-head{display:flex;justify-content:space-between;gap:15px}.review-card p{color:#5f5e68;line-height:1.55}.verified-order{color:#049b70;font-size:12px}
+
+/* Project detail */
+.breadcrumb{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px;font-weight:700;margin-bottom:22px}
+.breadcrumb a{color:var(--muted)}.breadcrumb a:hover{color:var(--purple)}.breadcrumb span:last-child{color:var(--ink)}
+.project-layout{display:grid;grid-template-columns:minmax(0,1.55fr) .7fr;gap:36px;align-items:start}
+.project-hero-image{border-radius:26px;overflow:hidden;height:420px;box-shadow:0 24px 55px rgba(39,31,68,.16)}
+.project-hero-image img{width:100%;height:100%;object-fit:cover}
+.project-title-row{display:flex;justify-content:space-between;gap:18px;align-items:start;margin-top:20px}
+.project-title-row h1{font-size:32px;letter-spacing:-.04em;margin:11px 0 0;line-height:1.1}
+.creator-strip{display:flex;align-items:center;gap:13px;padding:16px 18px;border-radius:18px;margin-top:22px;flex-wrap:wrap}
+.creator-strip .avatar-lg{width:46px;height:46px;font-size:16px;border-width:2px}
+.creator-strip-copy{display:grid;gap:2px;font-size:13px}
+.creator-strip-copy b{font-size:14.5px}
+.creator-strip-copy span{color:var(--muted)}
+.creator-strip-badges{margin-left:auto;margin-top:0;justify-content:flex-end}
+.project-story{margin-top:22px}
+.project-story>.muted{font-size:15px;line-height:1.6;margin:0 0 16px}
+.story-quote{border-radius:18px;padding:20px 22px}
+.story-quote p{margin:0;font-size:15px;line-height:1.65;color:#3c3a45}
+.funding-card{border-radius:22px;padding:24px}
+.funding-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:15px}
+.funding-top b{font-size:18px}
+.funding-card .progress{margin-top:10px}
+.funding-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0 16px;text-align:left}
+.funding-stats b{display:block;font-size:19px;letter-spacing:-.02em}
+.funding-stats small{color:var(--muted);font-size:12px}
+.funding-card .btn{width:100%}
+.reward-link{display:block;text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid rgba(73,55,126,.09)}
+.trust-panel{border-radius:22px;padding:24px;margin-top:18px}
+.trust-head{display:flex;align-items:center;gap:9px;font-size:15px}
+.trust-head svg{width:19px;height:19px;stroke:#06b981;fill:none;stroke-width:1.8}
+.trust-bar-row{display:flex;align-items:center;gap:12px;margin:14px 0 18px}
+.trust-bar{flex:1;height:8px;border-radius:999px;background:rgba(6,185,129,.13);overflow:hidden}
+.trust-bar span{display:block;height:100%;background:linear-gradient(90deg,#0bcf95,#06b981);border-radius:inherit}
+.trust-score-text{font-size:13px;font-weight:800;color:var(--muted);white-space:nowrap}
+.trust-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid rgba(73,55,126,.08);font-size:13px;color:#4a4854}
+.trust-row:first-of-type{border-top:0}
+.trust-row span{display:flex;align-items:center;gap:8px}
+.trust-row svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;opacity:.65}
+.trust-good{color:#06b981;font-weight:800}
+.trust-disclaimer{font-size:11px;line-height:1.5;margin-top:14px;padding-top:14px;border-top:1px solid rgba(73,55,126,.08)}
+@media (max-width:960px){
+  .project-layout{grid-template-columns:1fr}
+  .project-hero-image{height:300px}
+  .creator-strip-badges{margin-left:0;justify-content:flex-start}
+}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;z-index:100;background:rgba(17,14,30,.34);backdrop-filter:blur(14px);padding:22px;display:grid;place-items:center;animation:fadeIn .2s ease}.modal{width:min(720px,100%);max-height:min(84vh,760px);overflow:auto;border-radius:28px;padding:26px}.search-modal{width:min(760px,100%)}.modal-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.modal-head h2{margin:0;font-size:28px;letter-spacing:-.04em}.modal-head p.muted{margin:8px 0 0}.search-input-wrap{height:58px;margin-top:22px;border-radius:17px;background:rgba(255,255,255,.82);border:1px solid rgba(76,58,131,.1);display:flex;align-items:center;gap:12px;padding:0 17px;box-shadow:inset 0 2px 8px rgba(62,51,105,.04)}.search-input-wrap svg{width:20px;height:20px;fill:none;stroke:#696773;stroke-width:1.8}.search-input-wrap input{width:100%;height:100%;border:0;outline:none;background:transparent;font-size:16px}.search-results{display:grid;gap:9px;margin-top:15px}.search-result{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 14px;border-radius:15px;background:rgba(255,255,255,.58);cursor:pointer}.search-result:hover{background:#fff}.search-result small{color:var(--muted)}.result-type{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:900;color:var(--purple)}
+.project-form{display:grid;gap:15px;margin-top:22px}.project-form label{display:grid;gap:7px;font-size:12px;font-weight:800;color:#5c5968}.project-form input,.project-form textarea,.project-form select{width:100%;border:1px solid rgba(77,59,131,.11);border-radius:14px;background:rgba(255,255,255,.78);padding:13px 14px;outline:none;color:var(--ink)}.project-form input:focus,.project-form textarea:focus,.project-form select:focus{border-color:rgba(112,63,245,.45);box-shadow:0 0 0 4px rgba(112,63,245,.08)}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:13px}.project-form .btn{justify-self:start;margin-top:4px}.toast{position:fixed;z-index:120;right:24px;bottom:24px;background:#15141c;color:#fff;border-radius:14px;padding:13px 17px;box-shadow:0 18px 40px rgba(10,9,15,.28);transform:translateY(25px);opacity:0;pointer-events:none;transition:.25s ease;font-size:13px;font-weight:700}.toast.show{transform:translateY(0);opacity:1}
+
+/* Empty & search route */
+.empty-state{padding:70px 20px;text-align:center;border-radius:28px}.empty-state .brand-mark{margin:0 auto 17px}.empty-state h2{font-size:30px;margin:0 0 8px}.empty-state p{color:var(--muted);margin:0 auto 22px;max-width:500px}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes shine{50%,100%{transform:translateX(100%)}}
+
+/* Scroll-reveal: cards bounce/settle up into place as they enter the viewport */
+.reveal{
+  opacity:0;
+  transform:translateY(42px) scale(.96);
+  transition:opacity .6s cubic-bezier(.22,.8,.25,1),transform .8s cubic-bezier(.34,1.56,.64,1);
+  will-change:opacity,transform;
+}
+.reveal.in-view{opacity:1;transform:translateY(0) scale(1)}
+
+/* responsive */
+@media (max-width:1180px){
+  .hero-grid{grid-template-columns:1fr;gap:32px}.hero-feature{height:500px}.hero-copy{padding-bottom:0}.stats-grid{max-width:850px}.cards-3{grid-template-columns:repeat(2,1fr)}.creator-grid{grid-template-columns:repeat(2,1fr)}.footer-grid{grid-template-columns:1.4fr repeat(2,1fr)}.service-layout{grid-template-columns:1fr .56fr}.project-media{height:230px}
+}
+@media (max-width:960px){
+  :root{--header-h:74px}.header-shell{grid-template-columns:1fr auto}.desktop-nav{display:none}.mobile-menu-btn{display:grid}.desktop-only{display:none}.brand{font-size:20px}.brand-mark{width:39px;height:39px}.page-shell{padding-left:18px;padding-right:18px}.hero{padding-top:38px}.hero h1{font-size:clamp(48px,8vw,68px)}.hero-sub{font-size:18px}.stats-grid{grid-template-columns:repeat(2,1fr)}.cards-3,.cards-4{grid-template-columns:repeat(2,1fr)}.bento-grid{grid-template-columns:1fr;grid-template-rows:auto}.bento-card{min-height:210px}.bento-card.feature{grid-row:auto;min-height:330px}.trust-grid{grid-template-columns:1fr}.stories-grid{grid-template-columns:1fr}.footer-grid{grid-template-columns:1fr 1fr}.footer-brand{grid-column:1/-1}.profile-bento{grid-template-columns:repeat(2,1fr)}.pb-profile{grid-column:span 2}.pb-verify{grid-column:span 2;display:grid;text-align:left}.pb-verify .badges{justify-content:flex-start}.portfolio-grid{grid-template-columns:1fr}.neu-analytics{grid-template-columns:1fr}.service-layout{grid-template-columns:1fr}.side-stack{position:static}.service-main-image{height:440px}
+}
+@media (max-width:680px){
+  .site-header{padding:7px 8px 0}.header-shell{padding:0 10px 0 12px;border-radius:18px}.header-actions{gap:4px}.brand-word{font-size:18px}.brand-mark{width:36px;height:36px;border-radius:11px}.mobile-menu{top:83px;left:8px;right:8px}.page-shell{padding:20px 12px 54px}.section{padding:48px 0}.section-head{align-items:flex-start;display:grid;gap:10px}.section-head h2{font-size:32px}.section-head p{font-size:15px}.hero{padding-top:26px}.hero-grid{gap:22px}.hero-copy{padding-top:10px}.hero h1{font-size:48px;margin-top:24px}.hero-sub{font-size:16px}.hero-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:26px}.hero-actions .btn{min-width:0;padding:0 12px}.stats-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-top:28px}.stat-card{min-height:104px;padding:15px}.stat-value{font-size:23px}.hero-feature{height:420px;border-radius:25px}.floating-verify{left:15px;bottom:95px;transform:scale(.86);transform-origin:left bottom}.cards-3,.cards-4,.creator-grid{grid-template-columns:1fr}.project-media,.service-media{height:245px}.bento-card{padding:23px}.bento-card.feature{min-height:300px}.trust-card{padding:21px}.cta-band{border-radius:24px;padding:34px 18px}.footer-grid{grid-template-columns:1fr 1fr;gap:25px}.footer-brand{grid-column:1/-1}.footer-bottom{display:grid}.route-hero{padding-top:30px}.route-hero-inner{padding:27px 22px}.route-hero h1{font-size:42px}.profile-cover{height:160px;border-radius:22px 22px 0 0}.profile-shell{margin-top:-48px;padding:0 12px}.profile-bento{grid-template-columns:1fr 1fr;grid-auto-rows:auto;gap:10px}.pb-profile{grid-column:span 2;grid-row:auto;padding:20px}.pb-profile h1{font-size:23px}.pb-avatar{width:64px;height:64px}.pb-verify{grid-column:span 2;display:grid;text-align:left;padding:18px}.pb-verify .badges{justify-content:flex-start}.pb-metric{padding:18px}.pb-metric-value{font-size:22px}.tabs{overflow-x:auto}.portfolio-card{height:250px}.analytics-title{margin-top:38px}.neu-bars{grid-template-columns:1fr}.neu-row-2{grid-template-columns:1fr}.neu-exp-cells{grid-template-columns:1fr 1fr 1fr}.service-main-image{height:300px;border-radius:22px}.service-title-row h1{font-size:30px}.order-card,.seller-card{padding:20px}.form-row{grid-template-columns:1fr}.modal{padding:20px}.toast{left:12px;right:12px;bottom:12px;text-align:center}.mobile-menu .btn{width:100%}
+}
+@media (max-width:430px){
+  .hero h1{font-size:42px}.hero-actions{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}.stat-card{min-height:96px}.hero-feature{height:360px}.hero-feature-content{left:18px;right:18px;bottom:17px}.hero-feature-content h3{font-size:19px}.floating-verify{display:none}.footer-grid{grid-template-columns:1fr}.footer-brand{grid-column:auto}.profile-bento{grid-template-columns:1fr}.pb-profile{grid-column:span 1}.pb-verify{grid-column:span 1}.neu-exp-cells{grid-template-columns:1fr}.service-title-row{display:block}.cards-3,.cards-4{gap:14px}
+}
+
+/* ============================================================
+   Creator profile — colourful Bento showcase
+   ============================================================ */
+.cb-head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-top:46px}
+.cb-head-row h2{margin:0;font-size:24px;letter-spacing:-.03em}
+.cb-head-row p{margin:5px 0 0;color:var(--muted);font-size:14px}
+
+.creator-bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:16px;grid-auto-flow:dense;margin-top:20px}
+.cb-tile{
+  position:relative;overflow:hidden;cursor:pointer;
+  border-radius:26px;padding:22px 24px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  box-shadow:0 14px 30px rgba(30,20,60,.10);
+  transition:transform .32s cubic-bezier(.22,.8,.25,1),box-shadow .32s ease;
+  isolation:isolate;
+}
+.cb-tile:hover{transform:translateY(-6px) scale(1.015);box-shadow:0 26px 54px rgba(30,20,60,.20)}
+.cb-tile:active{transform:translateY(-2px) scale(.99)}
+.cb-w2{grid-column:span 2}
+.cb-h2{grid-row:span 2}
+.cb-decor{position:absolute;border-radius:50%;pointer-events:none;z-index:0}
+.cb-head{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between}
+.cb-icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.26)}
+.cb-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8}
+.cb-tap{font-size:11px;font-weight:800;opacity:.75;white-space:nowrap}
+.cb-content{position:relative;z-index:1}
+.cb-eyebrow{margin:0 0 5px;font-size:10.5px;font-weight:900;text-transform:uppercase;letter-spacing:.11em;opacity:.72}
+.cb-tile h3{margin:0 0 6px;font-size:19px;letter-spacing:-.025em;line-height:1.18}
+.cb-tile .cb-w2 h3,.cb-tile.cb-w2 h3{font-size:21px}
+.cb-desc{margin:0;font-size:12.5px;line-height:1.55;opacity:.88}
+.cb-mini-avatar{width:52px;height:52px;border-radius:16px;object-fit:cover;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.22);display:grid;place-items:center;font-weight:900;font-size:19px;margin-bottom:8px}
+.cb-taglist{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.cb-taglist span{background:rgba(255,255,255,.3);border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:800}
+.cb-stars{font-size:13px;letter-spacing:2px}
+
+/* colour variants */
+.cb-purple{background:linear-gradient(150deg,#7c43f6,#4a3fda);color:#fff}
+.cb-purple .cb-decor{width:190px;height:190px;background:rgba(255,255,255,.16);right:-60px;top:-70px}
+.cb-orange{background:linear-gradient(150deg,#ff9553,#ff6a1a);color:#fff}
+.cb-orange .cb-decor{width:210px;height:210px;background:rgba(255,255,255,.14);bottom:-90px;right:-40px}
+.cb-yellow{background:#ffd83f;color:#241c00}
+.cb-yellow .cb-decor{width:150px;height:150px;background:rgba(255,255,255,.45);left:-45px;bottom:-55px}
+.cb-pink{background:linear-gradient(150deg,#f8c9fb,#ef9df6);color:#3a1440}
+.cb-pink .cb-decor{width:170px;height:170px;background:rgba(255,255,255,.38);right:-55px;bottom:-55px}
+.cb-green{background:linear-gradient(150deg,#25cd90,#0aa06e);color:#fff}
+.cb-green .cb-decor{width:160px;height:160px;background:rgba(255,255,255,.15);left:-45px;top:-45px}
+.cb-blue{background:linear-gradient(150deg,#6396fb,#3971f6);color:#fff}
+.cb-blue .cb-decor{width:160px;height:160px;background:rgba(255,255,255,.15);right:-45px;top:-55px}
+.cb-dark{background:#141319;color:#fff}
+.cb-dark .cb-decor{width:180px;height:180px;background:rgba(255,255,255,.05);right:-60px;bottom:-65px}
+.cb-cream{background:#f7f0e2;color:#241c10}
+.cb-cream .cb-decor{width:130px;height:130px;background:rgba(255,255,255,.75);right:-35px;top:-45px}
+.cb-lavender{background:#ebe0fc;color:#2c1a4a}
+.cb-lavender .cb-decor{width:140px;height:140px;background:rgba(255,255,255,.45);left:-35px;bottom:-45px}
+
+.cb-yellow .cb-icon,.cb-pink .cb-icon,.cb-cream .cb-icon,.cb-lavender .cb-icon{background:rgba(0,0,0,.08)}
+.cb-yellow .cb-taglist span,.cb-pink .cb-taglist span,.cb-cream .cb-taglist span,.cb-lavender .cb-taglist span{background:rgba(0,0,0,.08)}
+
+/* Modal body — reuses the "final" bento shape at a smaller, focused scale */
+.bento-modal{width:min(760px,100%)}
+.bento-modal-body{margin-top:20px;display:grid;gap:14px}
+.bento-modal-body .cards-3{margin-top:2px}
+.bmg{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.bmg .bm-tile{border-radius:20px;padding:18px 19px}
+.bmg .bm-tile b{display:block;font-size:22px;margin-bottom:2px}
+.bmg .bm-tile span{font-size:12px;color:var(--muted)}
+.bm-wide{grid-column:1/-1}
+.bm-quote{border-radius:20px;padding:20px 21px}
+.bm-quote p{margin:0 0 12px;line-height:1.6;font-size:14.5px}
+.bm-quote-person{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.bm-achv{display:flex;gap:14px;align-items:flex-start;border-radius:18px;padding:16px 17px;background:rgba(255,255,255,.55)}
+.bm-achv .cb-icon{background:rgba(112,63,245,.12);color:var(--purple);flex:0 0 auto}
+.bm-achv b{display:block;font-size:14.5px;margin-bottom:2px}
+.bm-achv span{font-size:12.5px;color:var(--muted)}
+
+@media (max-width:960px){
+  .creator-bento{grid-template-columns:repeat(2,1fr);grid-auto-rows:150px}
+  .cb-w2{grid-column:span 2}
+  .bmg{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+  .creator-bento{grid-template-columns:1fr;gap:12px}
+  .cb-w2,.cb-h2{grid-column:span 1;grid-row:span 1}
+  .cb-tile{min-height:168px;padding:20px}
+  .cb-head-row{margin-top:34px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+/* ============================================================
+   GAME-HUB VISUAL ADD-ONS (decorative only — nothing removed)
+   Richer mesh gradient + floating game icons + pixel terrain
+   ============================================================ */
+.mesh-bg{background:linear-gradient(150deg,#f3edff 0%,#eef1ff 30%,#fdeef7 66%,#eafcf6 100%)}
+.mesh-orb.orb-d{width:480px;height:480px;background:#bfe9ff;left:36%;top:-180px;opacity:.42;animation-delay:-3s}
+.mesh-orb.orb-e{width:440px;height:440px;background:#c8ffe3;left:16%;bottom:-240px;opacity:.34;animation-delay:-12s}
+.mesh-orb.orb-f{width:360px;height:360px;background:#ffe3b0;right:22%;bottom:-160px;opacity:.3;animation-delay:-7s}
+
+.decor-layer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.decor-icon{position:absolute;filter:drop-shadow(0 8px 16px rgba(60,40,110,.16));animation:decorFloat 5.5s ease-in-out infinite alternate}
+.decor-icon svg{display:block;width:100%;height:100%}
+.decor-star{width:32px;height:32px;top:13%;left:5.5%;animation-delay:-1s;opacity:.8}
+.decor-sparkle-tr{width:24px;height:24px;top:4.5%;right:3.5%;animation-delay:-2.4s;opacity:.75}
+.decor-gem{width:38px;height:38px;top:46%;left:2%;animation-delay:-3.6s;opacity:.65}
+.decor-crown{width:40px;height:40px;top:8%;right:9%;animation-delay:-.6s;opacity:.8}
+.decor-mushroom{width:38px;height:38px;top:63%;right:2.5%;animation-delay:-4.2s;opacity:.65}
+.decor-chest{width:42px;height:42px;bottom:5%;right:4.5%;animation-delay:-2s;opacity:.65}
+.decor-heart-bubble{width:34px;height:34px;bottom:8%;left:3.5%;animation-delay:-1.6s;opacity:.7}
+@keyframes decorFloat{0%{transform:translate3d(0,0,0) rotate(-3deg)}100%{transform:translate3d(0,-16px,0) rotate(3deg)}}
+@media (max-width:960px){.decor-layer{display:none}}
+@media (prefers-reduced-motion:reduce){.decor-icon{animation:none}}
+
+.pixel-terrain{position:fixed;bottom:0;z-index:-1;pointer-events:none;opacity:.85}
+.pixel-terrain.left{left:0}
+.pixel-terrain.right{right:0}
+@media (max-width:1240px){.pixel-terrain{display:none}}
+
+/* Large floating background scenery (.custom-pixel-art) and the 30 scattered
+   mini icons (.scatter-icon) are sized with vw + fixed minimums that only make
+   sense on wide screens. On phones/tablets they overflow the page horizontally
+   and bleed on top of headings, so they're toned down / removed below. */
+@media (max-width:900px){
+  .custom-pixel-art{display:none!important}
+}
+@media (max-width:680px){
+  .scatter-icon{display:none!important}
+}
+
+/* extra floating icons layered on the hero card — additive only */
+.hero-decor{position:absolute;pointer-events:none;z-index:4;filter:drop-shadow(0 10px 20px rgba(60,40,110,.18));animation:decorFloat 5s ease-in-out infinite alternate}
+.hero-decor svg{width:100%;height:100%;display:block}
+.hero-decor-star{width:40px;height:40px;top:-24px;left:10%}
+.hero-decor-crown{width:50px;height:50px;top:-28px;right:8%;animation-delay:-2s}
+.hero-decor-gem{width:44px;height:44px;bottom:16%;right:-24px;animation-delay:-1.2s}
+.hero-decor-mushroom{width:46px;height:46px;bottom:-20px;right:14%;animation-delay:-3s}
+.hero-decor-chest{width:40px;height:40px;bottom:-18px;left:-16px;animation-delay:-2.6s}
+@media (max-width:960px){.hero-decor{display:none}}
+
+/* subtle game-hub tinted pill accent + section sparkle accents (additive, non-destructive) */
+.section-head h2{position:relative}
+
+/* ============================================================
+   GAME-HUB DECOR — PHASE 2: spread across every section + more colour
+   ============================================================ */
+.section,.route-hero{position:relative}
+.section-decor{position:absolute;pointer-events:none;z-index:1;filter:drop-shadow(0 8px 16px rgba(60,40,110,.14));animation:decorFloat 5.8s ease-in-out infinite alternate}
+.section-decor svg{width:100%;height:100%;display:block}
+.sd-sm{width:28px;height:28px;opacity:.6}
+.sd-md{width:38px;height:38px;opacity:.62}
+.sd-lg{width:48px;height:48px;opacity:.65}
+.sd-tr{top:6px;right:0}
+.sd-tl{top:6px;left:0}
+.sd-br{bottom:10px;right:0}
+.sd-bl{bottom:10px;left:0}
+@media (max-width:900px){.section-decor{transform:scale(.7)}}
+@media (max-width:680px){.section-decor{display:none}}
+
+/* richer, more saturated mesh gradient — layered on top, nothing removed */
+.mesh-bg{background:linear-gradient(150deg,#f0e6ff 0%,#e6ecff 26%,#ffe9f6 55%,#e3fff2 78%,#fff3e0 100%)}
+.mesh-orb{opacity:.58;filter:blur(64px)}
+.mesh-orb.orb-a{background:#c9a9ff}
+.mesh-orb.orb-b{background:#a8b9ff}
+.mesh-orb.orb-c{background:#ffb3d9}
+.mesh-orb.orb-d{background:#9fdcff;opacity:.5}
+.mesh-orb.orb-e{background:#9ff7cf;opacity:.42}
+.mesh-orb.orb-f{background:#ffcf8a;opacity:.4}
+.mesh-orb.orb-g{width:340px;height:340px;background:#ff9ad1;right:2%;top:36%;opacity:.32;animation-delay:-9s}
+.mesh-orb.orb-h{width:300px;height:300px;background:#8fe3ff;left:4%;top:64%;opacity:.32;animation-delay:-14s}
+
+/* tiled 2D-pixel confetti scattered down the whole page as it scrolls (not just viewport) */
+.page-shell{position:relative}
+.pixel-field{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:visible}
+.pixel-field span{position:absolute;display:block;border-radius:3px;animation:pixelBlink 3.6s ease-in-out infinite alternate}
+@keyframes pixelBlink{0%{opacity:.35;transform:translateY(0)}100%{opacity:.85;transform:translateY(-6px)}}
+@media (max-width:680px){.pixel-field{display:none}}
+
+/* ============================================================
+   GAME-HUB DECOR — PHASE 3: checkerboard pixel-dust clusters
+   + mini pixel character, matched to the reference screenshot
+   ============================================================ */
+.decor-checker-tl{width:30px;height:30px;top:8%;left:2.5%;animation-delay:-3s;opacity:.5}
+.decor-checker-tr{width:30px;height:30px;top:22%;right:1.5%;animation-delay:-4.4s;opacity:.5}
+.decor-checker-mid{width:26px;height:26px;top:82%;left:1.8%;animation-delay:-1.4s;opacity:.45}
+
+.hero-decor-checker-tl,.hero-decor-checker-tr{width:32px;height:32px;opacity:.55}
+.hero-decor-checker-tl{top:-40px;left:-34px}
+.hero-decor-checker-tr{top:-42px;right:-30px}
+
+.sd-pixelguy{width:26px}
+
+/* ============================================================
+   GAME-HUB DECOR — PHASE 4: mesh-gradient blobs that scroll
+   with content, so the colourful mesh extends down every
+   section of the page (not just the fixed viewport layer)
+   ============================================================ */
+.section-mesh{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;z-index:0;mix-blend-mode:multiply;animation:floatOrb 18s ease-in-out infinite alternate}
+.sm-purple{background:#c9a9ff}
+.sm-pink{background:#ffb3d9}
+.sm-blue{background:#a8d4ff}
+.sm-mint{background:#9ff7cf}
+.sm-amber{background:#ffd9a0}
+.sm-sm{width:220px;height:220px;opacity:.4}
+.sm-md{width:320px;height:320px;opacity:.36}
+.sm-lg{width:420px;height:420px;opacity:.32}
+.sm-tl{top:-10%;left:-6%}
+.sm-tr{top:-10%;right:-6%}
+.sm-bl{bottom:-12%;left:-6%}
+.sm-br{bottom:-12%;right:-6%}
+.sm-mid{top:30%;left:38%}
+@media (max-width:680px){.section-mesh{display:none}}
+
+/* ============================================================
+   FIX — stop the elastic "overscroll bounce" past the real end
+   of the page, which was revealing the fixed mesh-gradient /
+   decor layer as a blank extra screen after the footer.
+   Purely additive: nothing above is removed or changed.
+   ============================================================ */
+html,body{overscroll-behavior-y:none;height:100%}
+html{overflow-x:hidden}
+/* .page-shell{overflow-x:clip}  <-- Removed to stop clipping the hero shadow */
+/* --- FIX: Remove massive blank space at the bottom of the page --- */
+html, body {
+  height: auto !important; /* Fixes background getting cut off */
+  min-height: 100vh;
+}
+
+.page-shell {
+  padding-bottom: 0 !important; /* Removes the 64px empty block after the footer */
+}
+
+.site-footer {
+  padding-bottom: 12px !important; /* Pulls the bottom edge tight against the copyright text */
+}
+/* --- FIX: Compact Mobile Profile & Bento Grids --- */
+
+/* For Tablets & Large Phones (Below 680px) */
+@media (max-width: 680px) {
+  /* Make the lower detail section a compact 2-column grid */
+  .creator-bento {
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-auto-rows: auto !important;
+    gap: 10px !important;
+  }
   
-    html += '</div>';
-    return html;
+  /* Make the boxes physically smaller */
+  .cb-tile { 
+    min-height: 120px !important; 
+    padding: 15px !important; 
   }
-
-  // FIXED: Wrapped in a full-width absolute container entirely OUTSIDE .page-shell
-  // This completely stops the straight-line cutoff caused by container bounds.
-  // The left/right values are set exactly to let the images hug the screen edge 
-  // like the crosshair you drew.
-  function largeBackgroundScenery() {
-    return `
-    <div style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; overflow:visible;">
-      
-      <!-- Island 1: Gun (Near Top Left) -->
-      <img class="custom-pixel-art" src="assets/pixel-island-gun.png" alt="Pixel Art Gun Island" 
-           style="position:absolute; top:20%; left:-5vw; width:clamp(250px, 30vw, 450px); transform:rotate(8deg); opacity:0.85; filter:drop-shadow(0 20px 30px rgba(60,40,110,0.15)); image-rendering: pixelated;">
-
-      <!-- Island 2: Mech Character (Middle Right) -->
-      <img class="custom-pixel-art" src="assets/pixel-island-mech.png" alt="Pixel Art Mech Character" 
-           style="position:absolute; top:50%; right:-5vw; width:clamp(300px, 35vw, 500px); transform:rotate(-6deg); opacity:0.9; filter:drop-shadow(0 20px 30px rgba(60,40,110,0.15)); image-rendering: pixelated;">
-
-      <!-- Island 3: Magic Crystals (Near Bottom Left) -->
-      <img class="custom-pixel-art" src="assets/pixel-island-crystals.png" alt="Pixel Art Crystals" 
-           style="position:absolute; top:80%; left:-3vw; width:clamp(200px, 25vw, 400px); transform:rotate(12deg); opacity:0.85; filter:drop-shadow(0 20px 30px rgba(60,40,110,0.15)); image-rendering: pixelated;">
-
-    </div>`;
-  }
-
-  function sectionHead(title, subtitle, linkText = '', linkHref = '#/') {
-    return `<div class="section-head"><div><h2>${title}</h2><p>${subtitle}</p></div>${linkText ? `<a class="text-link" href="${linkHref}">${linkText} <span>→</span></a>` : ''}</div>`;
-  }
-
-  // ==========================================
-  // PASTE YOUR MISSING DATA & FUNCTIONS HERE
-  // ==========================================
-  // --- MISSING DATA ARRAYS ---
-  const talentCategories = [
-    ['Programmers', icons.code], ['3D Artists', icons.gemDecor], ['2D Artists', icons.sparkle],
-    ['Animators', icons.controller], ['Music & Audio', icons.mail], ['Game Designers', icons.rocket],
-    ['Writers', icons.message], ['VFX', icons.starDecor], ['UI/UX', icons.badge], ['QA', icons.shield]
-  ];
-
-  const marketplaceAssets = [
-    {id:'medieval-village', title:'Medieval Village Pack', creator:'Vikram Rao', category:'Environments', engine:'Unity · URP', formats:'FBX · PNG', price:499, rating:'4.8', reviews:124, image:'assets/office.jpg'},
-    {id:'cyberpunk-city', title:'Cyberpunk City Pack', creator:'Ananya Das', category:'Environments', engine:'Unreal', formats:'FBX · TGA', price:1299, rating:'4.9', reviews:88, image:'assets/gaming.jpg', auction:true, currentBid:1240, bids:14, timeLeft:'02:41:18'}
-  ];
-
-  const gameJams = [
-    {id:'monsoon-jam-2026', name:'Monsoon Game Jam 2026', theme:'Rebirth', status:'Active', deadline:'Aug 24, 2026', participants:214, submissions:38},
-    {id:'48hr-indie-sprint', name:'48-Hour Indie Sprint', theme:'One Button', status:'Upcoming', deadline:'Sep 6, 2026', participants:0, submissions:0}
-  ];
-
-  const communityActivity = [
-    {actor:'ArjunDev', action:'published a new devlog for', target:'Project Nightfall', type:'Devlog', time:'2h ago'},
-    {actor:'PixelForge', action:'uploaded a new asset:', target:'Medieval Village Pack', type:'Asset', time:'4h ago'}
-  ];
-
-  const creatorMarket = [
-    {key:'ananya-das', trust:94, index:82.4, unitPrice:142, change:18.4, spark:[40,52,48,60,55,70,66,80]},
-    {key:'vikram-rao', trust:96, index:88.1, unitPrice:171, change:9.2, spark:[60,58,64,62,70,68,75,79]},
-    {key:'karthik-iyer', trust:91, index:74.6, unitPrice:118, change:-2.1, spark:[70,66,68,60,62,58,55,57]}
-  ];
-  const marketByKey = Object.fromEntries(creatorMarket.map(m => [m.key, m]));
-
-  // --- MISSING RENDER FUNCTIONS ---
-  function risingCreatorCard(c) {
-    const m = marketByKey[c.key] || {trust:90, index:70};
-    return `<article class="rc-card flat-card" data-creator="${c.key}">${avatarMarkup(c.avatar, c.name, 'rc-avatar')}<div class="rc-body"><h3>${c.name}</h3><p class="rc-role">${c.role}</p><div class="rc-stats"><span>Trust: <b>${m.trust}</b></span><span>Index: <b>${m.index}</b></span></div></div></article>`;
-  }
-
-  function talentCategoryChip(name, icon) {
-    return `<a class="talent-chip flat-card" href="#/freelancers" data-talent="${name}"><span class="ti">${icon}</span><span>${name}</span></a>`;
-  }
-
-  function assetCard(a) {
-    const media = a.image ? `<img src="${a.image}" alt="${a.title}" loading="lazy">` : `<div class="placeholder-icon" aria-hidden="true"></div>`;
-    const priceBlock = a.auction ? `<span class="asset-price">₹${fmt(a.currentBid)}</span>` : `<span class="asset-price">₹${fmt(a.price)}</span>`;
-    return `<article class="asset-card flat-card" data-asset="${a.id}"><div class="asset-media">${media}</div><div class="asset-body"><h4>${a.title}</h4><div class="asset-price-row">${priceBlock}</div></div></article>`;
-  }
-
-  function activeProjectCard(p) {
-    const media = p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy">` : `<div class="placeholder-icon" aria-hidden="true"></div>`;
-    return `<article class="aproj-card flat-card" data-project="${p.id}"><div class="aproj-media">${media}</div><div class="aproj-body"><h4>${p.title.split(' — ')[0]}</h4><p class="aproj-dev">${p.creator} · ${p.category}</p></div></article>`;
-  }
-
-  function marketCardMini(c) {
-    const m = marketByKey[c.key];
-    if (!m) return '';
-    const up = m.change >= 0;
-    return `<article class="market-card" data-market="${c.key}"><div class="market-card-top">${avatarMarkup(c.avatar, c.name, 'market-avatar')}<div><p class="market-name">${c.name}</p></div></div><div class="market-price-row"><span class="market-price">${m.unitPrice} CC</span></div></article>`;
-  }
-
-  function jamCard(j) {
-    return `<article class="jam-card flat-card" data-jam="${j.id}"><div class="jam-status-row"><h4>${j.name}</h4><span class="meta-chip">${j.status}</span></div><p class="jam-theme">Theme: ${j.theme} · Deadline ${j.deadline}</p></article>`;
-  }
-
- function activityFeedItem(a) {
-    return `<div class="activity-item"><span class="activity-avatar" aria-hidden="true">${a.actor.charAt(0)}</span><div class="activity-body"><p><b>${a.actor}</b> ${a.action} <b>${a.target}</b></p></div></div>`;
-  }
-
-  // ==========================================
-  // PASTE YOUR TWO BACKGROUND FUNCTIONS HERE
-  // ==========================================
-  function scatteredArt() {
-    const arts = [
-      icons.chestDecor, icons.mushroomDecor, icons.gemDecor,
-      icons.starDecor, icons.sparkleDecor, icons.heartBubbleDecor,
-      icons.coinDecor, icons.blockDecor
-    ];
   
-    let html = '<div style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; overflow:visible;">';
+  /* Wide tiles span both columns, tall tiles are forced to be standard height on mobile */
+  .cb-w2 { grid-column: span 2 !important; }
+  .cb-h2 { grid-row: span 1 !important; } 
   
-    for (let i = 0; i < 30; i++) {
-      const icon = arts[i % arts.length];
-      const top = 10 + (Math.random() * 85);
-      const left = 2 + (Math.random() * 90);
-      const size = 25 + (Math.random() * 30);
-      const rot = Math.random() * 90 - 45;
+  /* Shrink text and icons inside the detail tiles */
+  .cb-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .cb-icon svg { width: 16px; height: 16px; }
+  .cb-tile h3 { font-size: 16px !important; margin-bottom: 4px; }
+  .cb-tile.cb-w2 h3 { font-size: 17px !important; }
+  .cb-desc { font-size: 11.5px !important; line-height: 1.4 !important; }
+  .cb-eyebrow { font-size: 9.5px !important; margin-bottom: 4px; }
+}
+
+/* For Small Phones (Below 430px) */
+@media (max-width: 430px) {
+  /* Force the top counting metrics into a 2x2 grid instead of a 1-column vertical stack */
+  .profile-bento {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
   
-      html += `<span class="scatter-icon" style="position:absolute; top:${top}%; left:${left}%; width:${size}px; height:${size}px; transform:rotate(${rot}deg); opacity:0.6; filter:drop-shadow(0 8px 16px rgba(60,40,110,0.12));">${icon}</span>`;
-    }
+  /* Keep the main profile card and bottom verification card full-width */
+  .pb-profile { grid-column: span 2 !important; padding: 16px !important; }
+  .pb-verify { grid-column: span 2 !important; padding: 16px !important; display: block; text-align: left; }
   
-    html += '</div>';
-    return html;
+  /* Shrink the counting metric boxes */
+  .pb-metric { padding: 12px !important; }
+  .pb-metric-value { font-size: 20px !important; }
+  .pb-metric-label { font-size: 10px !important; }
+}
+/* --- FIX: Compact Analytics & Trust Section for Mobile --- */
+
+@media (max-width: 680px) {
+  /* Reduce the massive padding inside all neumorphic cards */
+  .neu-card { 
+    padding: 16px !important; 
+    border-radius: 20px !important;
   }
-
-  function largeBackgroundScenery() {
-    return `
-    <div style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; overflow:visible;">
-      <img class="custom-pixel-art" src="assets/pixel-island-gun.png" alt="Pixel Art Gun Island" 
-           style="position:absolute; top:20%; left:-5vw; width:clamp(250px, 30vw, 450px); transform:rotate(8deg); opacity:0.85; filter:drop-shadow(0 20px 30px rgba(60,40,110,0.15)); image-rendering: pixelated;">
-      <img class="custom-pixel-art" src="assets/pixel-island-mech.png" alt="Pixel Art Mech Character" 
-           style="position:absolute; top:50%; right:-5vw; width:clamp(300px, 35vw, 500px); transform:rotate(-6deg); opacity:0.9; filter:drop-shadow(0 20px 30px rgba(60,40,110,0.15)); image-rendering: pixelated;">
-      <img class="custom-pixel-art" src="assets/pixel-island-crystals.png" alt="Pixel Art Crystals" 
-           style="position:absolute; top:80%; left:-3vw; width:clamp(200px, 25vw, 400px); transform:rotate(12deg); opacity:0.85; filter:drop-shadow(0 20px 30px rgba(60,40,110,0.15)); image-rendering: pixelated;">
-    </div>`;
-  }
-  // ==========================================
-
-  function homeView() {
-    return `
-      ${largeBackgroundScenery()} <!-- Placed outside page-shell to prevent clipping -->
-      ${scatteredArt()}           <!-- Placed outside page-shell to prevent clipping -->
-      <div class="page-shell">
-        ${pixelField()}
-        <section class="hero">
-          <div class="hero-grid">
-            <div class="hero-copy">
-              <span class="pill">${icons.sparkle} Built for Indian creators · UPI-first</span>
-              <h1>India's platform to <span class="gradient-text">Build, Fund & Create.</span></h1>
-              <p class="hero-sub">Turn your ideas into real projects. Raise funding, showcase your work, and find opportunities — all in one place.</p>
-              <div class="hero-actions">
-                <button class="btn btn-primary magnetic" data-start-project>Start a Project <span>→</span></button>
-                <a class="btn btn-ghost magnetic" href="#/explore">Explore Creators</a>
-              </div>
-              <div class="stats-grid">
-                <div class="stat-card neu-card"><div class="stat-value">₹4.2 Cr+</div><div class="stat-label">Funds raised on DevFund India</div></div>
-                <div class="stat-card neu-card"><div class="stat-value">12,400+</div><div class="stat-label">Creators building</div></div>
-                <div class="stat-card neu-card"><div class="stat-value">860+</div><div class="stat-label">Projects funded</div></div>
-                <div class="stat-card neu-card"><div class="stat-value">3,100+</div><div class="stat-label">Freelance jobs completed</div></div>
-              </div>
-            </div>
-            <div class="hero-visual">
-              <div class="hero-feature">
-                <img src="assets/gaming.jpg" alt="Creator developing a game" fetchpriority="high">
-                <div class="hero-feature-content">
-                  <span class="category-chip">Indie Games</span>
-                  <h3>Aether — A Hand-Drawn 2D Adventure</h3>
-                  <p>by Ananya Das · Guwahati, Assam</p>
-                  <div class="progress-row"><span>₹2,45,000 raised</span><span>49% of ₹5,00,000</span></div>
-                  <div class="progress"><span style="width:49%"></span></div>
-                </div>
-              </div>
-              <div class="floating-verify" aria-label="Identity verified">
-                <span class="verify-icon">${icons.shield}</span>
-                <span><b>Identity Verified</b><small>Real KYC, real trust</small></span>
-              </div>
-              <span class="hero-decor hero-decor-crown" aria-hidden="true">${icons.crown}</span>
-              <span class="hero-decor hero-decor-star" aria-hidden="true">${icons.starDecor}</span>
-              <span class="hero-decor hero-decor-gem" aria-hidden="true">${icons.gemDecor}</span>
-              <span class="hero-decor hero-decor-mushroom" aria-hidden="true">${icons.mushroomDecor}</span>
-              <span class="hero-decor hero-decor-chest" aria-hidden="true">${icons.chestDecor}</span>
-              <span class="hero-decor hero-decor-checker-tl" aria-hidden="true">${icons.checkerDecor}</span>
-              <span class="hero-decor hero-decor-checker-tr" aria-hidden="true">${icons.checkerDecor}</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="section" id="featured-projects">
-          ${sectionDecor('sd-tr','sd-md',icons.starDecor)}
-          ${sectionDecor('sd-tl','sd-sm',icons.checkerDecor)}
-          ${sectionHead('Featured projects','Hand-picked campaigns building something real in India','Browse all projects','#/projects')}
-          <div class="cards-3">${projects.slice(0,3).map(projectCard).join('')}</div>
-        </section>
-
-        <section class="section" id="recently-funded">
-          ${sectionDecor('sd-bl','sd-sm',icons.coinDecor)}
-          ${sectionDecor('sd-tr','sd-sm',icons.checkerDecor)}
-          ${sectionHead('Recently funded','Campaigns gaining momentum right now','See more','#/projects')}
-          <div class="cards-3">${[projects[2],projects[3],projects[0]].map(projectCard).join('')}</div>
-        </section>
-
-        <section class="section" id="creators">
-          ${sectionDecor('sd-tr','sd-md',icons.gemDecor)}
-          ${sectionDecor('sd-bl','sd-sm',icons.sparkleDecor)}
-          ${sectionDecor('sd-br','sd-sm',icons.pixelGuyDecor)}
-          ${sectionHead('Trending creators','Discover artists, developers, and makers across India','Explore creators','#/explore')}
-          <div class="creator-grid">${creators.slice(0,6).map(creatorCard).join('')}</div>
-        </section>
-
-        <section class="section" id="services">
-          ${sectionDecor('sd-tl','sd-md',icons.mushroomDecor)}
-          ${sectionDecor('sd-tr','sd-sm',icons.checkerDecor)}
-          ${sectionHead('Popular freelance services','Hire verified creators — from game dev to 3D art','Browse marketplace','#/freelancers')}
-          <div class="cards-3">${services.slice(0,3).map(serviceCard).join('')}</div>
-        </section>
-
-        <section class="section" id="how-it-works">
-          ${sectionDecor('sd-tr','sd-lg',icons.crown)}
-          ${sectionDecor('sd-bl','sd-md',icons.cloudDecor)}
-          ${sectionDecor('sd-tl','sd-sm',icons.checkerDecor)}
-          <div class="section-head center"><h2>How it works</h2><p>The complete ecosystem for Indian creators</p></div>
-          <div class="bento-grid">
-            <article class="bento-card feature glass-card glow-card">
-              <span class="bento-icon">${icons.rocket}</span><span class="bento-number">1</span>
-              <h3>Create your profile</h3><p>Sign up, verify your email and phone, and build a professional creator profile with your portfolio.</p>
-            </article>
-            <article class="bento-card glass-card glow-card">
-              <span class="bento-icon">${icons.wallet}</span><span class="bento-number">2</span>
-              <h3>Launch a project</h3><p>Set a funding goal in ₹, add reward tiers, and tell your story. Your project goes live after a quick review.</p>
-            </article>
-            <article class="bento-card glass-card glow-card">
-              <span class="bento-icon">${icons.users}</span><span class="bento-number">3</span>
-              <h3>Get discovered & backed</h3><p>Backers discover your work and contribute via UPI. Track progress from your dashboard.</p>
-            </article>
-            <article class="bento-card glass-card glow-card">
-              <span class="bento-icon">${icons.badge}</span><span class="bento-number">4</span>
-              <h3>Deliver & build reputation</h3><p>Ship rewards or freelance work. Earn verified reviews that make your next project easier to fund.</p>
-            </article>
-          </div>
-        </section>
-
-        <section class="section" id="trust">
-          ${sectionDecor('sd-tl','sd-md',icons.chestDecor)}
-          ${sectionDecor('sd-br','sd-sm',icons.blockDecor)}
-          ${sectionDecor('sd-bl','sd-sm',icons.pixelGuyDecor)}
-          <div class="section-head center"><h2>Trust & Safety</h2><p>Where money and professional work are involved, trust isn't optional</p></div>
-          <div class="trust-grid">
-            <article class="trust-card glass-card glow-card"><span class="verify-icon">${icons.shield}</span><div><h3>Verification badges you can trust</h3><p>Creators earn Email, Phone, Identity, and Payment Verified badges through real verification steps.</p></div></article>
-            <article class="trust-card glass-card glow-card"><span class="verify-icon">${icons.shield}</span><div><h3>Transparent Project Trust panel</h3><p>Every project shows creator account age, previous deliveries, funding progress, and risk disclosure.</p></div></article>
-            <article class="trust-card glass-card glow-card"><span class="verify-icon">${icons.shield}</span><div><h3>UPI-first Indian payments</h3><p>Designed for how India actually pays. Connect UPI, cards, net banking and wallets through regulated gateways.</p></div></article>
-            <article class="trust-card glass-card glow-card"><span class="verify-icon">${icons.shield}</span><div><h3>Moderated, not anonymous</h3><p>Projects are reviewed before going live. Reports, disputes, and suspensions belong to a real moderation workflow.</p></div></article>
-          </div>
-          <div class="trust-badges">${verificationBadges()}<a class="badge" href="#/explore">Learn how verification works →</a></div>
-        </section>
-
-        <section class="section" id="stories">
-          ${sectionDecor('sd-tr','sd-md',icons.heartBubbleDecor)}
-          ${sectionDecor('sd-bl','sd-sm',icons.starDecor)}
-          ${sectionDecor('sd-tl','sd-sm',icons.checkerDecor)}
-          <div class="section-head center"><h2>Indian creator stories</h2><p>Real journeys from the DevFund India community</p></div>
-          <div class="stories-grid">${stories.map(s => `
-            <article class="story-card glass-card glow-card"><div class="quote-mark">”</div><blockquote>${s.quote}</blockquote><div class="story-person">${avatarMarkup(s.avatar,s.creator,'avatar-xs story-avatar')}<span><b>${s.creator}</b><span>${s.role}</span></span></div></article>`).join('')}</div>
-        </section>
-
-        <section class="section" id="faq">
-          ${sectionDecor('sd-tl','sd-sm',icons.coinDecor)}
-          ${sectionDecor('sd-br','sd-md',icons.gemDecor)}
-          ${sectionDecor('sd-tr','sd-sm',icons.checkerDecor)}
-          ${sectionDecor('sd-bl','sd-sm',icons.chestDecor)}
-          <div class="section-head center"><h2>Frequently asked questions</h2></div>
-          <div class="faq-wrap">${faqs.map((f,i)=>`<article class="faq-item glass-card"><button class="faq-q" type="button" aria-expanded="false"><span>${f[0]}</span><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></button><div class="faq-a"><div>${f[1]}</div></div></article>`).join('')}</div>
-        </section>
-
-        ${ctaFooter()}
-      </div>`;
-  }
-
-  function ctaFooter() {
-    return `
-      <section class="section-tight">
-        <div class="cta-band">
-          <h2>Ready to build something real?</h2>
-          <p>Join thousands of Indian creators funding their work, getting discovered, and building reputation — one project at a time.</p>
-          <div class="cta-actions"><button class="btn btn-white magnetic" data-start-project>Start a Project <span>→</span></button><a class="btn btn-outline-light magnetic" href="#/freelancers">Hire a Creator</a></div>
-        </div>
-      </section>
-      <footer class="site-footer">
-        <div class="footer-grid">
-          <div class="footer-brand">
-            <a class="brand" href="#/"><span class="brand-mark">${icons.sparkle}</span><span class="brand-word">DevFund <strong>India</strong></span></a>
-            <p>India's platform to build, fund & create. Raise funding, showcase your work, and find opportunities — all in one place.</p>
-            <p><strong>Made in India 🇮🇳 · UPI-first payments</strong></p>
-          </div>
-          <div class="footer-col"><h4>Platform</h4><a href="#/explore">Explore Creators</a><a href="#/projects">Browse Projects</a><a href="#/freelancers">Freelance Marketplace</a><a href="#/#how-it-works">How it Works</a><a href="#/projects">Start a Project</a></div>
-          <div class="footer-col"><h4>Creators</h4><a href="#/explore">Creator Handbook</a><a href="#/projects">Funding Guide</a><a href="#/freelancers">Pricing & Fees</a><a href="#/#trust">Verification</a><a href="#/#stories">Creator Stories</a></div>
-          <div class="footer-col"><h4>Trust & Safety</h4><a href="#/#trust">Trust & Safety Center</a><a href="#/#trust">Verification Process</a><a href="#/#trust">Report Abuse</a><a href="#/#trust">Dispute Resolution</a><a href="#/#trust">Community Guidelines</a></div>
-          <div class="footer-col"><h4>Company</h4><a href="#/">About DevFund India</a><a href="#/">Careers</a><a href="#/">Press</a><a href="#/">Blog</a><a href="#/">Contact Support</a></div>
-        </div>
-        <p class="footer-disclaimer"><strong>Disclaimer:</strong> DevFund India is a platform that connects creators and backers. Funding on this platform is reward-based crowdfunding or voluntary support — it is <strong>not</strong> investment, equity, or a guarantee of financial returns. Creators are responsible for delivering rewards and for their own tax, GST, and legal obligations. Payment processing, KYC, and escrow are provided through regulated third-party partners. Always review a project's risks before backing.</p>
-        <div class="footer-bottom"><span>© 2026 DevFund India. All rights reserved.</span><div class="footer-links"><a href="#/">Terms of Service</a><a href="#/">Privacy Policy</a><a href="#/">Refund Policy</a><a href="#/">GST & Tax</a><a href="#/">Support</a></div></div>
-      </footer>`;
-  }
-
-  function routeHero(title, subtitle, eyebrow='Discover DevFund India') {
-    return `<section class="route-hero">
-      <span class="section-decor sd-tr sd-lg" aria-hidden="true">${icons.crown}</span>
-      <span class="section-decor sd-bl sd-md" aria-hidden="true">${icons.gemDecor}</span>
-      <span class="section-decor sd-tl sd-sm" aria-hidden="true">${icons.sparkleDecor}</span>
-      <span class="section-decor sd-tr sd-sm" aria-hidden="true">${icons.checkerDecor}</span>
-      <span class="section-decor sd-bl sd-sm" aria-hidden="true">${icons.checkerDecor}</span>
-      <div class="route-hero-inner glass-card"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${subtitle}</p></div>
-    </section>`;
-  }
-
-  function projectsView() {
-    return `<div class="page-shell">${pixelField()}${routeHero('Projects worth backing','Explore verified creator campaigns spanning games, technology, music and immersive media.','Crowdfunding')}
-      <div class="filter-bar">${['All','Indie Games','Technology','Animation','Music'].map((x,i)=>`<button class="filter-chip ${i===0?'active':''}" data-project-filter="${x}">${x}</button>`).join('')}</div>
-      <div class="cards-3" id="projectListing">${projects.map(projectCard).join('')}</div>
-      ${ctaFooter()}
-    </div>`;
-  }
-
-  function exploreView() {
-    return `<div class="page-shell">${pixelField()}${routeHero('Explore creators','Meet verified artists, developers, musicians, makers and storytellers from across India.','Creator discovery')}
-      <div class="creator-grid">${creators.map(creatorCard).join('')}</div>
-      ${ctaFooter()}
-    </div>`;
-  }
-
-  function freelancersView() {
-    return `<div class="page-shell">${pixelField()}${routeHero('Freelance marketplace','Hire verified creators for production-ready work — with clear pricing, delivery timelines and trust signals.','Services')}
-      <div class="cards-3">${services.map(serviceCard).join('')}</div>
-      ${ctaFooter()}
-    </div>`;
-  }
-
-  function cbTile({key, color, span='', icon, eyebrow, title, desc, extra='', creatorKey}) {
-    return `
-      <article class="cb-tile ${color} ${span}" data-bento-tile="${key}" data-bento-creator="${creatorKey}" tabindex="0">
-        <span class="cb-decor" aria-hidden="true"></span>
-        <div class="cb-head"><span class="cb-icon">${icon}</span><span class="cb-tap">Tap to view →</span></div>
-        <div class="cb-content">
-          <p class="cb-eyebrow">${eyebrow}</p>
-          <h3>${title}</h3>
-          <p class="cb-desc">${desc}</p>
-          ${extra}
-        </div>
-      </article>`;
-  }
-
-  function creatorBentoGrid(c, ownProjects, ownServices) {
-    const extra = creatorExtras[c.key] || { bio: 'This creator has not added a bio yet.', skills: [], social: [] };
-    const testimonials = creatorTestimonials[c.key] || [];
-    const raisedTotal = ownProjects.reduce((s, p) => s + p.raised, 0);
-    const backersTotal = ownProjects.reduce((s, p) => s + p.backers, 0);
-    const campaigns = ownProjects.length;
-    const bioWords = extra.bio.split(' ');
-    const bioTeaser = bioWords.slice(0, 16).join(' ') + (bioWords.length > 16 ? '…' : '');
-    const topQuote = testimonials[0];
-
-    const tiles = [
-      cbTile({ key:'profile', color:'cb-purple', span:'cb-w2 cb-h2', icon:icons.sparkle, creatorKey:c.key,
-        eyebrow:'Creator', title:c.name, desc:`${c.role} · ${c.location}`,
-        extra:`${avatarMarkup(c.avatar,c.name,'cb-mini-avatar')}<div class="cb-taglist"><span>${c.followers} followers</span><span>${c.projects} projects</span><span>★ ${c.rating}</span></div>` }),
-      cbTile({ key:'about', color:'cb-cream', span:'cb-w2', icon:icons.message, creatorKey:c.key,
-        eyebrow:'About', title:'The story so far', desc:bioTeaser }),
-      cbTile({ key:'achievements', color:'cb-dark', icon:icons.award, creatorKey:c.key,
-        eyebrow:'Milestones', title:'Achievements', desc:'Verified track record, built order by order.' }),
-      cbTile({ key:'skills', color:'cb-yellow', icon:icons.code, creatorKey:c.key,
-        eyebrow:'Toolkit', title:'Skills & Stack', desc:(extra.skills.slice(0,2).join(' · ') || 'Not listed yet'),
-        extra:`<div class="cb-taglist">${extra.skills.slice(0,3).map(s=>`<span>${s}</span>`).join('')}</div>` }),
-      cbTile({ key:'projects', color:'cb-orange', span:'cb-w2', icon:icons.controller, creatorKey:c.key,
-        eyebrow:'Campaigns & work',
-        title: campaigns ? `${campaigns} live campaign${campaigns>1?'s':''}` : (ownServices.length ? `${ownServices.length} service${ownServices.length>1?'s':''} listed` : 'Open for commissions'),
-        desc: campaigns ? ownProjects[0].title : 'Browse published work, or reach out to commission something new.' }),
-      cbTile({ key:'reviews', color:'cb-pink', span:'cb-h2', icon:icons.star, creatorKey:c.key,
-        eyebrow:'Backer & buyer reviews', title: topQuote ? topQuote.name : 'No reviews yet',
-        desc: topQuote ? `"${topQuote.quote}"` : `Be the first to back or hire ${c.name.split(' ')[0]}.` }),
-      cbTile({ key:'trust', color:'cb-green', icon:icons.shield, creatorKey:c.key,
-        eyebrow:'Trust & safety', title:'98% completion rate', desc:'~2h avg. response · 4/4 verifications' }),
-      cbTile({ key:'funding', color:'cb-blue', icon:icons.wallet, creatorKey:c.key,
-        eyebrow:'Funding',
-        title: campaigns ? `₹${fmt(raisedTotal)} raised` : 'Ready to launch',
-        desc: campaigns ? `${fmt(backersTotal)} backers across ${campaigns} campaign${campaigns>1?'s':''}` : 'No campaigns live yet — check back soon.' }),
-      cbTile({ key:'connect', color:'cb-lavender', icon:icons.link, creatorKey:c.key,
-        eyebrow:'Get in touch', title:'Message or follow', desc:'Reach out directly or check social links.' })
-    ];
-
-    return `
-      <div class="cb-head-row"><div><h2>${c.name.split(' ')[0]}'s Bento Portfolio</h2><p>Tap any card for the full picture — built for backers, buyers and hiring creators.</p></div></div>
-      <div class="creator-bento">${tiles.join('')}</div>`;
-  }
-
-  function openBentoModal(tileKey, creatorKey) {
-    const c = creators.find(x => x.key === creatorKey) || creators[0];
-    const extra = creatorExtras[c.key] || { bio:'This creator has not added a bio yet.', skills:[], social:[] };
-    const testimonials = creatorTestimonials[c.key] || [];
-    const ownProjects = projects.filter(x => x.creatorKey === c.key);
-    const ownServices = services.filter(x => x.creatorKey === c.key);
-    const raisedTotal = ownProjects.reduce((s, p) => s + p.raised, 0);
-    const backersTotal = ownProjects.reduce((s, p) => s + p.backers, 0);
-
-    let eyebrow = 'Creator showcase', title = c.name, body = '';
-
-    switch (tileKey) {
-      case 'profile':
-        eyebrow = 'Full profile'; title = c.name;
-        body = `
-          <div class="bmg">
-            <div class="bm-tile cb-purple bm-wide" style="display:flex;gap:16px;align-items:center">
-              ${avatarMarkup(c.avatar,c.name,'avatar-lg')}
-              <div><b style="font-size:19px">${c.name}</b><span style="display:block">${c.handle} · ${c.role}</span><span>⌾ ${c.location}</span></div>
-            </div>
-            <div class="bm-tile cb-cream"><b>${c.followers}</b><span>Followers</span></div>
-            <div class="bm-tile cb-cream"><b>${c.projects}</b><span>Projects</span></div>
-            <div class="bm-tile cb-cream"><b>${c.rating}</b><span>Rating</span></div>
-            <div class="bm-tile cb-cream"><b>${c.orders}</b><span>Completed orders</span></div>
-          </div>
-          <div class="badges" style="margin-top:14px">${verificationBadges()}</div>
-          <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-            <button class="btn btn-primary magnetic" data-toast="Following ${c.name}">Follow</button>
-            <button class="btn btn-ghost" data-toast="Message composer opened">${icons.message} Message</button>
-            <a class="btn btn-ghost" href="#/creator/${c.key}" data-modal-close="bentoModal">Open full profile page →</a>
-          </div>`;
-        break;
-      case 'about':
-        eyebrow = 'About'; title = `About ${c.name.split(' ')[0]}`;
-        body = `
-          <div class="bm-quote cb-cream"><p>${extra.bio}</p></div>
-          <div class="bmg">
-            <div class="bm-tile cb-lavender"><b>${c.location.split(',')[0]}</b><span>Based in</span></div>
-            <div class="bm-tile cb-lavender"><b>${c.projects}</b><span>Projects shipped</span></div>
-          </div>`;
-        break;
-      case 'achievements': {
-        eyebrow = 'Milestones'; title = 'Achievements';
-        const achv = [
-          { icon:icons.star, t: parseFloat(c.rating) >= 4.9 ? 'Top Rated Creator' : 'Rising Talent', d:`${c.rating}★ average across ${c.orders} orders` },
-          { icon:icons.badge, t:'Fully Verified', d:'Email, phone, identity & payment verified' }
-        ];
-        if (ownProjects.length) achv.push({ icon:icons.rocket, t:`${ownProjects.length} Campaign${ownProjects.length>1?'s':''} Launched`, d:'Crowdfunding track record on DevFund India' });
-        if (c.orders) achv.push({ icon:icons.briefcase, t:`${c.orders} Orders Delivered`, d:'Completed freelance work for verified buyers' });
-        body = achv.map(a => `<div class="bm-achv"><span class="cb-icon">${a.icon}</span><div><b>${a.t}</b><span>${a.d}</span></div></div>`).join('');
-        break;
-      }
-      case 'skills':
-        eyebrow = 'Toolkit'; title = 'Skills & Stack';
-        body = `<div class="cb-taglist" style="gap:8px">${(extra.skills.length ? extra.skills : ['Not listed yet']).map(s => `<span style="background:rgba(112,63,245,.1);color:var(--purple);padding:8px 14px;border-radius:999px;font-weight:800;font-size:12.5px">${s}</span>`).join('')}</div>`;
-        break;
-      case 'projects':
-        eyebrow = 'Campaigns & work'; title = `${c.name.split(' ')[0]}'s work`;
-        if (ownServices.length) body = `<div class="cards-3">${ownServices.map(serviceCard).join('')}</div>`;
-        else if (ownProjects.length) body = `<div class="cards-3">${ownProjects.map(projectCard).join('')}</div>`;
-        else body = `<div class="bm-quote cb-cream"><p>No published campaigns yet. This creator is available for freelance commissions — send a message to get started.</p></div>`;
-        break;
-      case 'reviews':
-        eyebrow = 'Backer & buyer reviews'; title = 'What people say';
-        body = testimonials.length
-          ? testimonials.map(t => `<div class="bm-quote cb-pink"><p>"${t.quote}"</p><div class="bm-quote-person"><b>${t.name}</b>&nbsp;· ${t.role}</div></div>`).join('')
-          : `<div class="bm-quote cb-cream"><p>No reviews yet — be the first to back or hire ${c.name}.</p></div>`;
-        break;
-      case 'trust':
-        eyebrow = 'Trust & safety'; title = 'Trust & Verification';
-        body = `
-          <div class="badges" style="margin-bottom:14px">${verificationBadges()}</div>
-          <div class="bmg">
-            <div class="bm-tile cb-green"><b>98%</b><span>Completion rate</span></div>
-            <div class="bm-tile cb-green"><b>~2h</b><span>Avg. response time</span></div>
-          </div>`;
-        break;
-      case 'funding':
-        eyebrow = 'Funding'; title = 'Funding raised';
-        body = ownProjects.length ? `
-          <div class="bmg">
-            <div class="bm-tile cb-blue"><b>₹${fmt(raisedTotal)}</b><span>Total raised</span></div>
-            <div class="bm-tile cb-blue"><b>${fmt(backersTotal)}</b><span>Total backers</span></div>
-            <div class="bm-tile cb-blue bm-wide"><b>${ownProjects.length}</b><span>Campaign${ownProjects.length>1?'s':''} launched</span></div>
-          </div>` : `<div class="bm-quote cb-cream"><p>${c.name} hasn't launched a crowdfunding campaign yet.</p></div>`;
-        break;
-      case 'connect':
-      default:
-        eyebrow = 'Get in touch'; title = 'Connect';
-        body = `
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn btn-primary magnetic" data-toast="Message composer opened">${icons.message} Message</button>
-            <button class="btn btn-ghost" data-toast="Following ${c.name}">Follow</button>
-            <button class="btn btn-ghost" data-toast="Profile link copied">${icons.share} Share</button>
-          </div>
-          <div class="cb-taglist" style="margin-top:16px;gap:8px">${(extra.social && extra.social.length ? extra.social : [['No social links yet','#']]).map(s => `<a href="${s[1]}" class="tag" data-toast="Link is a placeholder in this prototype" style="text-decoration:none;color:inherit">${s[0]}</a>`).join('')}</div>`;
-        break;
-    }
-
-    $('#bentoModalEyebrow').textContent = eyebrow;
-    $('#bentoModalTitle').textContent = title;
-    $('#bentoModalBody').innerHTML = body;
-    openModal('bentoModal');
-    bindDynamicUI();
-  }
-
-  function profileBentoGrid(c) {
-    return `
-      <div class="profile-bento">
-        <article class="pb-tile pb-profile cb-purple">
-          <span class="cb-decor" aria-hidden="true"></span>
-          <div class="pb-profile-row">
-            ${avatarMarkup(c.avatar,c.name,'pb-avatar')}
-            <div class="pb-icon-actions">
-              <button class="icon-btn pb-icon-btn" type="button" data-toast="Profile link copied">${icons.share}</button>
-              <button class="icon-btn pb-icon-btn" type="button" data-toast="Saved to favourites">${icons.heart}</button>
-            </div>
-          </div>
-          <h1>${c.name}</h1>
-          <p class="pb-role">${c.handle} · ${c.role}</p>
-          <p class="pb-loc">${icons.pin} ${c.location}</p>
-          <div class="pb-cta">
-            <button class="btn btn-ghost pb-btn-ghost" type="button" data-toast="Message composer opened">${icons.message} Message</button>
-            <button class="btn btn-primary magnetic" type="button" data-toast="Following ${c.name}">Follow</button>
-          </div>
-        </article>
-        <article class="pb-tile pb-metric cb-cream"><span class="pb-metric-label">Followers</span><span class="pb-metric-value">${c.followers}</span></article>
-        <article class="pb-tile pb-metric cb-lavender"><span class="pb-metric-label">Projects</span><span class="pb-metric-value">${c.projects}</span></article>
-        <article class="pb-tile pb-metric cb-yellow"><span class="pb-metric-label">Rating</span><span class="pb-metric-value">★ ${c.rating}</span></article>
-        <article class="pb-tile pb-metric cb-blue"><span class="pb-metric-label">Completed orders</span><span class="pb-metric-value">${c.orders}</span></article>
-        <article class="pb-tile pb-verify cb-dark">
-          <div class="pb-verify-copy"><h3>Verification status</h3><p>Badges are earned through real verification — never assumed.</p></div>
-          <div class="badges">${verificationBadges()}</div>
-        </article>
-      </div>`;
-  }
-
-  function analyticsNeuGrid(c) {
-    const bars = [['Communication',100,'5.0'],['Quality',100,'5.0'],['Timeliness',80,'4.0'],['Professionalism',100,'5.0']];
-    return `
-      <h2 class="analytics-title">Analytics, Trust & Experience</h2>
-      <div class="neu-analytics">
-        <div class="neu-col">
-          <article class="neu-card neu-trust">
-            <div class="neu-trust-head">
-              <div><div class="muted neu-label">Trust Rating</div><div class="score-big">91<span>/100</span></div></div>
-              <div class="stars">★★★★★ <span class="stars-num">5.0</span></div>
-            </div>
-            <div class="neu-bars">
-              ${bars.map(x=>`<div class="neu-bar"><label><span>${x[0]}</span><span>${x[2]}</span></label><div class="neu-bar-track"><span class="neu-bar-fill" data-pct="${x[1]}"></span></div></div>`).join('')}
-            </div>
-            <p class="muted neu-trust-foot">4/4 verifications · ${c.projects} delivered projects</p>
-          </article>
-          <div class="neu-row-2">
-            <article class="neu-card neu-small">
-              <b>Completion rate</b>
-              <div class="score-big neu-big-sm">98%</div>
-              <div class="neu-bar-track neu-progress-track"><span class="neu-bar-fill neu-fill-green" data-pct="98"></span></div>
-            </article>
-            <article class="neu-card neu-small">
-              <b>Avg. response</b>
-              <div class="score-big neu-big-sm">~2h</div>
-              <p class="muted">Across last 30 orders</p>
-            </article>
-          </div>
-        </div>
-        <div class="neu-col">
-          <article class="neu-card neu-experience">
-            <div class="muted neu-label">Experience & Track Record</div>
-            <div class="neu-exp-cells">
-              <div class="neu-exp-cell neu-inset">${icons.briefcase}<b>5y</b><small>Experience</small></div>
-              <div class="neu-exp-cell neu-inset">${icons.award}<b>${c.projects}</b><small>Projects</small></div>
-              <div class="neu-exp-cell neu-inset">${icons.clock}<b>${c.orders}</b><small>Orders</small></div>
-            </div>
-          </article>
-          <article class="neu-card neu-trend">
-            <div class="neu-trend-head"><span class="muted neu-label">Funding raised (8-mo trend)</span><span class="neu-trend-arrow">${icons.trendUp}</span></div>
-            <div class="fake-chart"><svg viewBox="0 0 600 110" preserveAspectRatio="none"><defs><linearGradient id="areaTrend" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7b42f5" stop-opacity=".23"/><stop offset="1" stop-color="#7b42f5" stop-opacity="0"/></linearGradient></defs><path d="M0 86 C90 68 155 61 220 57 S330 61 410 48 S520 30 600 18 L600 110 L0 110 Z" fill="url(#areaTrend)"/><path d="M0 86 C90 68 155 61 220 57 S330 61 410 48 S520 30 600 18" fill="none" stroke="#743dff" stroke-width="3"/></svg></div>
-          </article>
-          <article class="neu-card neu-info">
-            <div class="neu-info-row"><span class="neu-info-icon">${icons.pin}</span><span>${c.location}</span></div>
-            <div class="neu-info-row"><span class="neu-info-icon">${icons.translate}</span><span class="neu-lang-pills"><span class="lang-pill">Hindi</span><span class="lang-pill">English</span></span></div>
-            <div class="neu-info-row neu-verified-row"><span class="neu-info-icon neu-info-icon-green">${icons.shield}</span><span>Identity & payment verified for safe transactions</span></div>
-          </article>
-        </div>
-      </div>`;
-  }
-
-  function creatorView(key) {
-    const c = creators.find(x => x.key === key) || creators[0];
-    const ownProjects = projects.filter(x => x.creatorKey === c.key);
-    const ownServices = services.filter(x => x.creatorKey === c.key);
-    return `<div class="page-shell">${pixelField()}
-      <section class="profile-cover"></section>
-      <div class="profile-shell">
-        ${profileBentoGrid(c)}
-        ${creatorBentoGrid(c, ownProjects, ownServices)}
-        ${analyticsNeuGrid(c)}
-        ${ownProjects.length || ownServices.length ? `<section class="section"><div class="section-head"><div><h2>${c.name}'s work</h2><p>Campaigns and freelance services on DevFund India</p></div></div>${ownServices.length ? `<div class="cards-3">${ownServices.map(serviceCard).join('')}</div>` : `<div class="cards-3">${ownProjects.map(projectCard).join('')}</div>`}</section>`:''}
-      </div>
-      ${ctaFooter()}
-    </div>`;
-  }
-
-  function serviceView(key) {
-    const s = services.find(x => x.key === key) || services[0];
-    const creator = creators.find(c => c.key === s.creatorKey) || creators[0];
-    return `<div class="page-shell service-detail">
-      <div class="service-layout">
-        <div>
-          <div class="service-main-image"><img src="${s.image || 'assets/service-game.jpg'}" alt="${s.title}"></div>
-          <div class="service-title-row"><div><span class="pill">${s.category}</span><h1>${s.title}</h1><p class="hero-sub" style="font-size:16px">${s.desc}</p></div><div style="display:flex;gap:8px"><button class="icon-btn glass-card" data-toast="Saved to favourites">${icons.heart}</button><button class="icon-btn glass-card" data-toast="Service reported for review">⚑</button></div></div>
-          <div class="tag-list">${s.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-          <h2 class="steps-title">How ordering works</h2><p class="steps-sub">Payments are held in escrow and released only when you approve the delivery.</p>
-          <div class="order-steps">${['Client sends request','Freelancer accepts','Payment initiated (escrow)','Work begins','Delivery submitted','Client reviews','Payment released'].map((x,i)=>`<div class="order-step glass-card"><span class="step-num">${i+1}</span><span>${x}</span></div>`).join('')}</div>
-          <p class="muted" style="font-size:11px;margin:18px 0 0">Prototype workflow. Production connects to a compliant escrow/payment provider.</p>
-          <h2 class="steps-title">Reviews (1)</h2>
-          <article class="review-card glass-card"><div class="review-head"><b>Aditya K.</b><span style="color:#f5ac16">★ 5.0</span></div><p style="font-size:12px">Communication: 5/5 &nbsp;&nbsp; Quality: 5/5 &nbsp;&nbsp; Timeliness: 4/5 &nbsp;&nbsp; Professionalism: 5/5</p><p>${s.creator} delivered a polished prototype ahead of schedule. Great communication throughout.</p><span class="verified-order">✓ Verified completed order</span></article>
-        </div>
-        <aside class="side-stack">
-          <article class="order-card glass-panel"><div class="muted" style="font-size:12px">Starting at</div><div class="order-price">₹${fmt(s.price)}</div><div class="order-meta"><span>◷ ${s.days} days</span><span>1 revision</span></div><button class="btn btn-primary magnetic" data-toast="Order request started">Place Order</button><button class="btn btn-ghost" data-toast="Contact request opened">${icons.message} Contact</button></article>
-          <article class="seller-card glass-card"><div class="seller-head">${avatarMarkup(creator.avatar,creator.name,'avatar-lg')}<div><b>${creator.name}</b><span>${creator.handle}</span></div></div><div class="seller-stats"><span>★ ${creator.rating}</span><span>${creator.orders} orders</span><span>${creator.location}</span></div><div class="badges" style="justify-content:flex-start">${verificationBadges()}</div><a class="text-link" href="#/creator/${creator.key}" style="margin-top:17px">View creator profile →</a></article>
-        </aside>
-      </div>
-      ${ctaFooter()}
-    </div>`;
-  }
-
-  function projectView(key) {
-    const p = projects.find(x => x.id === key) || projects[0];
-    const creator = creators.find(c => c.key === p.creatorKey) || creators[0];
-    const pct = percent(p);
-    return `<div class="page-shell project-detail">
-      <nav class="breadcrumb"><a href="#/projects">Projects</a><span>›</span><span>${p.category}</span></nav>
-      <div class="project-layout">
-        <div>
-          <div class="project-hero-image"><img src="${p.image || 'assets/gaming.jpg'}" alt="${p.title}"></div>
-          <div class="project-title-row">
-            <div><span class="pill">${p.category}</span><h1>${p.title}</h1></div>
-            <div style="display:flex;gap:8px"><button class="icon-btn glass-card" data-toast="Saved to favourites">${icons.heart}</button><button class="icon-btn glass-card" data-toast="Project link copied">${icons.share}</button><button class="icon-btn glass-card" data-toast="Project reported for review">⚑</button></div>
-          </div>
-          <div class="creator-strip glass-card">
-            ${avatarMarkup(creator.avatar, creator.name, 'avatar-lg')}
-            <div class="creator-strip-copy"><b>${creator.name}</b><span>${creator.location} · ${p.previousProjects} previous projects</span></div>
-            <div class="badges creator-strip-badges">
-              <span class="badge">${icons.mail} Email Verified</span>
-              <span class="badge">${icons.shield} Identity Verified</span>
-              <span class="badge">${icons.badge} Payment Verified</span>
-            </div>
-          </div>
-          <div class="tabs"><button class="tab active">Story</button><button class="tab">Updates</button><button class="tab">Rewards</button><button class="tab">Reviews</button><button class="tab">Risks</button></div>
-          <div class="project-story">
-            <p class="muted">${p.story}</p>
-            <div class="story-quote glass-card"><p>${p.quote}</p></div>
-          </div>
-        </div>
-        <aside class="side-stack">
-          <article class="funding-card glass-panel">
-            <div class="funding-top"><b>₹${fmt(p.raised)} raised</b><span class="muted">${pct}% of ₹${fmt(p.goal)}</span></div>
-            <div class="progress"><span style="width:${pct}%"></span></div>
-            <div class="funding-stats">
-              <div><b>₹${(p.raised/100000).toFixed(2)} L</b><small>raised</small></div>
-              <div><b>${p.backers}</b><small>backers</small></div>
-              <div><b>${p.days}</b><small>days left</small></div>
-            </div>
-            <button class="btn btn-primary magnetic" data-toast="Backing flow can be connected to your payment provider">Back This Project</button>
-            <a class="text-link reward-link" href="#" data-toast="Reward tiers coming soon">Choose a reward</a>
-          </article>
-          <article class="trust-panel glass-card">
-            <div class="trust-head">${icons.shield} <b>Project Trust</b></div>
-            <div class="trust-bar-row"><div class="trust-bar"><span style="width:100%"></span></div><span class="trust-score-text">100/100</span></div>
-            <div class="trust-row"><span>${icons.badge} Creator verified</span><b class="trust-good">Yes</b></div>
-            <div class="trust-row"><span>${icons.clock} Account age</span><b class="trust-good">${p.accountAge} days</b></div>
-            <div class="trust-row"><span>${icons.briefcase} Previous projects</span><b class="trust-good">${p.previousProjects}</b></div>
-            <div class="trust-row"><span>${icons.badge} Successful deliveries</span><b class="trust-good">${p.deliveries}</b></div>
-            <div class="trust-row"><span>${icons.users} Backers</span><b class="trust-good">${p.backers}</b></div>
-            <div class="trust-row"><span>${icons.clock} Last update</span><b class="trust-good">${p.lastUpdate}</b></div>
-            <p class="muted trust-disclaimer">This score is based on verifiable information only. It is not a guarantee and does not mean a project is "100% safe".</p>
-          </article>
-        </aside>
-      </div>
-      ${ctaFooter()}
-    </div>`;
-  }
-
-  function searchRouteView() {
-    return `<div class="page-shell">${pixelField()}${routeHero('Search DevFund India','Use the search control to find projects, creators and services.','Search')}<div class="empty-state glass-card"><span class="brand-mark">${icons.sparkle}</span><h2>Everything in one search</h2><p>Search across crowdfunding projects, verified creators and freelance services.</p><button class="btn btn-primary magnetic" data-search-open>Open search</button></div>${ctaFooter()}</div>`;
-  }
-
-  const app = $('#app');
-
-  function parseRoute() {
-    const hash = location.hash || '#/';
-    const clean = hash.replace(/^#\/?/, '');
-    const [pathPart, anchor] = clean.split('#');
-    const parts = pathPart.split('/').filter(Boolean);
-    return {parts, anchor};
-  }
-
-  function initGSAPParallax() {
-    if (typeof gsap === 'undefined') return;
-    gsap.registerPlugin(ScrollTrigger);
   
-    ScrollTrigger.getAll().forEach(t => t.kill());
+  /* Force Completion Rate & Avg Response to stay side-by-side */
+  .neu-row-2 { 
+    grid-template-columns: 1fr 1fr !important; 
+    gap: 12px !important; 
+  }
+  .neu-big-sm { 
+    font-size: 22px !important; 
+    margin: 4px 0 6px !important; 
+  }
+  .neu-small p { 
+    font-size: 11px !important; 
+  }
+
+  /* Make the graph shorter so it doesn't waste vertical space */
+  .fake-chart { 
+    height: 60px !important; 
+    margin-top: 8px !important; 
+  }
+  .neu-trend-head span.muted { 
+    font-size: 11px !important; 
+  }
+
+  /* Tighten up the list with location/language/verification */
+  .neu-info { 
+    gap: 10px !important; 
+  }
+  .neu-info-row { 
+    font-size: 11.5px !important; 
+    gap: 10px !important; 
+  }
+  .neu-info-icon { 
+    width: 26px !important; 
+    height: 26px !important; 
+    border-radius: 8px !important; 
+  }
+}
+
+@media (max-width: 430px) {
+  /* Force the Experience/Projects/Orders boxes into a 3-column row instead of 3 huge stacked rows */
+  .neu-exp-cells { 
+    grid-template-columns: repeat(3, 1fr) !important; 
+    gap: 8px !important; 
+    margin-top: 12px !important;
+  }
+  .neu-exp-cell { 
+    padding: 10px 4px !important; 
+    border-radius: 14px !important;
+  }
+  .neu-exp-cell svg { 
+    width: 16px !important; 
+    height: 16px !important; 
+  }
+  .neu-exp-cell b { 
+    font-size: 16px !important; 
+    margin-top: 4px !important; 
+  }
+  .neu-exp-cell small { 
+    font-size: 9.5px !important; 
+    letter-spacing: -0.02em;
+  }
+}
+/* --- FIX: 3D PURE GLASS FOOTER --- */
+.site-footer {
+  /* 1. Base Glass Material */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.02)) !important;
+  backdrop-filter: blur(35px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(180%) !important;
   
-    // 1. Animate scattered tiny icons
-    const floaters = document.querySelectorAll('.decor-icon, .section-decor, .scatter-icon');
-    floaters.forEach((icon) => {
-      const speed = 150 + Math.random() * 600; 
-      const rot = Math.random() * 100 - 50; 
+  /* 2. The 3D Rim (Brighter top edge, faint side edges) */
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.8) !important; 
+  border-bottom: none !important;
   
-      gsap.to(icon, {
-        y: -speed,
-        rotation: `+=${rot}`, 
-        ease: "none",
-        scrollTrigger: {
-          trigger: "body",
-          start: "top top",
-          end: "bottom top",
-          scrub: 1.5
-        }
-      });
-    });
+  /* 3. The Depth (Outer elevation + Thick inner highlight + Ambient inner glow) */
+  box-shadow: 
+    0 -20px 50px rgba(30, 20, 60, 0.1),         /* Lifts it off the background */
+    inset 0 2px 4px rgba(255, 255, 255, 0.8),   /* Creates the thick glass lip */
+    inset 0 -10px 30px rgba(255, 255, 255, 0.1) !important; /* Soft internal volume */
+  
+  /* Shaping */
+  border-radius: 40px 40px 0 0 !important;
+  padding: 56px 48px 24px !important;
+  position: relative;
+  z-index: 10;
+}
 
-    // 2. Animate the 3 custom external images at calculated slow speeds!
-    const windowHeight = window.innerHeight;
-    const cornerArts = document.querySelectorAll('.custom-pixel-art');
-    const distances = [windowHeight + 400, windowHeight + 600, windowHeight + 800]; 
-
-    cornerArts.forEach((art, index) => {
-      gsap.to(art, {
-        y: -distances[index], 
-        ease: "none",
-        scrollTrigger: {
-          trigger: "body",
-          start: "top top",
-          end: "bottom top",
-          scrub: 1 
-        }
-      });
-    });
+/* Mobile adjustments remain the same */
+@media (max-width: 680px) {
+  .site-footer {
+    padding: 40px 24px 20px !important;
+    border-radius: 28px 28px 0 0 !important;
   }
+}
 
-  function renderRoute() {
-    const {parts, anchor} = parseRoute();
-    const page = parts[0] || '';
-    if (!page) app.innerHTML = homeView();
-    else if (page === 'projects') app.innerHTML = projectsView();
-    else if (page === 'explore') app.innerHTML = exploreView();
-    else if (page === 'freelancers') app.innerHTML = freelancersView();
-    else if (page === 'creator') app.innerHTML = creatorView(parts[1]);
-    else if (page === 'service') app.innerHTML = serviceView(parts[1]);
-    else if (page === 'project') app.innerHTML = projectView(parts[1]);
-    else if (page === 'search') app.innerHTML = searchRouteView();
-    else app.innerHTML = `<div class="page-shell">${pixelField()}<div class="empty-state glass-card"><span class="brand-mark">${icons.sparkle}</span><h2>Page not found</h2><p>The page you requested does not exist in this prototype.</p><a class="btn btn-primary" href="#/">Go home</a></div>${ctaFooter()}</div>`;
+/* ============================================================
+   FINAL SCROLL-BOUNDARY FIX
+   Keeps decorative mesh / GSAP art from creating scrollable
+   overflow below the real footer.
+   ============================================================ */
+html {
+  overflow-x: clip !important;
+  overscroll-behavior-y: none;
+}
 
-    bindDynamicUI();
-    initScrollReveal();
-    initProgressBars();
-    initGSAPParallax();
-    if (anchor) requestAnimationFrame(() => document.getElementById(anchor)?.scrollIntoView({behavior:'smooth'}));
-    else window.scrollTo({top:0,behavior:'auto'});
-    app.focus({preventScroll:true});
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: clip !important;
+  overscroll-behavior-y: none;
+}
+
+#app {
+  position: relative;
+  overflow: clip !important;
+}
+
+.page-shell {
+  padding-bottom: 0 !important;
+}
+
+.site-footer {
+  margin-bottom: 0 !important;
+}
+
+/* These are visual effects only; they must never define page height. */
+.mesh-bg,
+.decor-layer,
+.pixel-terrain {
+  pointer-events: none;
+}
+
+/* ============================================================
+   SINGLE CONTINUOUS MESH BACKGROUND
+   ------------------------------------------------------------
+   The old design had TWO mesh systems:
+   1) .mesh-bg (full viewport)
+   2) .section-mesh (inside .page-shell sections)
+
+   .page-shell clips horizontal overflow, so the blurred section
+   meshes were cut at the max-width container edges and produced
+   the visible vertical colour seams on BOTH sides.
+
+   Keep only the full-screen .mesh-bg. This guarantees one
+   uninterrupted gradient from the left edge to the right edge.
+   ============================================================ */
+
+.section-mesh {
+  display: none !important;
+}
+
+/* Content containers must not paint their own page-sized gradient layer. */
+.page-shell,
+.section,
+.section-tight,
+.route-hero,
+main#app {
+  background: transparent !important;
+}
+
+/* One continuous viewport-wide mesh only. */
+.mesh-bg {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  z-index: -2 !important;
+  background:
+    radial-gradient(circle at 8% 18%, rgba(201,169,255,.52), transparent 34%),
+    radial-gradient(circle at 88% 14%, rgba(168,185,255,.48), transparent 34%),
+    radial-gradient(circle at 86% 62%, rgba(255,179,217,.42), transparent 33%),
+    radial-gradient(circle at 18% 78%, rgba(159,247,207,.34), transparent 34%),
+    radial-gradient(circle at 58% 88%, rgba(255,207,138,.28), transparent 32%),
+    linear-gradient(150deg,#f0e6ff 0%,#e6ecff 26%,#ffe9f6 55%,#e3fff2 78%,#fff3e0 100%) !important;
+}
+
+/*
+  Keep page-shell clipping if needed for non-background decorative
+  elements, but there are now no section gradient blobs to expose
+  that clipping boundary.
+*/
+/* Dark Container styling */
+.section-dark {
+  background: var(--ink-dark);
+  color: var(--text-dark-primary);
+  border-radius: 28px;
+  padding: 44px clamp(18px, 3vw, 40px);
+  margin: 0 0 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Rising Creators Grid */
+.rc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.rc-card { display: flex; gap: 13px; padding: 16px; align-items: flex-start; cursor: pointer; }
+
+/* Find Talent Grid */
+.talent-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+
+/* Asset Marketplace Grid */
+.asset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+/* Creator Market Grid */
+.market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+/* Game Jams Grid */
+.jam-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+
+/* Community Activity Feed */
+.activity-feed { display: flex; flex-direction: column; gap: 1px; border-radius: var(--radius-xs); overflow: hidden; background: rgba(64,47,120,.08); }
+.activity-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; background: #fff; }
+
+.muted,
+p.muted,
+.hero-sub,
+.project-desc,
+.cb-desc,
+.story-person span,
+.footer-brand p,
+.footer-disclaimer,
+.trust-disclaimer,
+.neu-small p,
+.desktop-nav a, 
+.nav-link-button,
+.card-foot,
+.creator-handle,
+.creator-role,
+.creator-location,
+.creator-meta,
+.service-meta,
+.tag,
+.review-card p,
+.trust-row,
+.project-form label,
+.tab,
+.breadcrumb a,
+.search-result small,
+.empty-state p,
+.pb-role,
+.pb-loc,
+.pb-verify-copy p {
+  color: #000000 !important;
+  opacity: 1 !important; /* Removes any faded transparency */
+}
+@media (max-width: 680px) {
+  .reveal {
+    /* Reduces the jump distance and speeds up the animation on mobile */
+    transform: translateY(15px) scale(0.98); 
+    transition: opacity 0.4s ease-out, transform 0.5s ease-out;
   }
+}
+/* --- WHITE 3D TRANSPARENT GLASS HUD (NO DOTS) --- */
+.section-head {
+  position: relative !important;
+  padding: 34px 42px !important;
+  margin-bottom: 40px !important;
+  align-items: center !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  z-index: 1;
+  /* Adds actual 3D depth behind the complex glass shape */
+  filter: drop-shadow(0 12px 24px rgba(35, 25, 75, 0.12));
+}
 
-  let revealObserver = null;
-  const REVEAL_SELECTOR = '.project-card,.creator-card,.service-card,.bento-card,.cb-tile,.pb-tile,.trust-card,.story-card,.stat-card,.faq-item,.metric-card,.experience-cell,.detail-card,.trend-card,.neu-card,.order-step,.route-hero-inner,.section-head';
+/* 1. The Hollow 3D White Glass Border */
+.section-head::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.6) 100%);
+  
+  /* The "Donut" Trick (cuts out the middle so it's a true hollow border) */
+  clip-path: polygon(
+    0 24px, 24px 0, calc(50% - 160px) 0, calc(50% - 140px) 8px, calc(50% + 140px) 8px, calc(50% + 160px) 0, calc(100% - 24px) 0, 100% 24px, 100% calc(100% - 24px), calc(100% - 24px) 100%, 24px 100%, 0 calc(100% - 24px), 0 24px, 
+    2px 25px, 
+    2px calc(100% - 25px), 25px calc(100% - 2px), calc(100% - 25px) calc(100% - 2px), calc(100% - 2px) calc(100% - 25px), calc(100% - 2px) 25px, calc(100% - 25px) 2px, calc(50% + 161px) 2px, calc(50% + 141px) 10px, calc(50% - 141px) 10px, calc(50% - 161px) 2px, 25px 2px, 
+    2px 25px
+  );
+}
 
-  function initScrollReveal() {
-    const els = $$(REVEAL_SELECTOR, app);
+/* 2. The Transparent Slate-White Glass Surface */
+.section-head::after {
+  content: "";
+  position: absolute;
+  inset: 2px; 
+  z-index: -2;
+  
+  background: 
+    /* Pink corner tech slashes */
+    repeating-linear-gradient(-45deg, rgba(223, 77, 255, 0.7) 0, rgba(223, 77, 255, 0.7) 2px, transparent 2px, transparent 7px) calc(100% - 30px) calc(100% - 16px) / 24px 8px no-repeat,
+    /* WHITER GLASS: Increased opacity from 0.4/0.05 to 0.85/0.45 */
+    linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.45) 100%);
+  
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  
+  clip-path: polygon(
+    23px 0, calc(50% - 159px) 0, calc(50% - 139px) 8px, calc(50% + 139px) 8px, calc(50% + 159px) 0, calc(100% - 23px) 0, 100% 23px, 100% calc(100% - 23px), calc(100% - 23px) 100%, 23px 100%, 0 calc(100% - 23px), 0 23px
+  );
+}
 
-    const seen = new Map();
-    els.forEach(el => {
-      el.classList.add('reveal');
-      const parent = el.parentElement;
-      const idx = seen.get(parent) || 0;
-      el.style.transitionDelay = `${Math.min(idx, 7) * 65}ms`;
-      seen.set(parent, idx + 1);
-    });
+/* Ensure Text Stays on Top */
+.section-head > div,
+.section-head > a {
+  position: relative;
+  z-index: 2;
+}
 
-    if (!('IntersectionObserver' in window)) {
-      els.forEach(el => el.classList.add('in-view'));
-      return;
-    }
-
-    if (revealObserver) revealObserver.disconnect();
-    revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const el = entry.target;
-          el.classList.add('in-view');
-          revealObserver.unobserve(el);
-          const cleanup = (ev) => {
-            if (ev.target !== el || ev.propertyName !== 'transform') return;
-            el.classList.remove('reveal', 'in-view');
-            el.style.transitionDelay = '';
-            el.removeEventListener('transitionend', cleanup);
-          };
-          el.addEventListener('transitionend', cleanup);
-        }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-
-    els.forEach(el => revealObserver.observe(el));
+/* Mobile shape scaling */
+@media (max-width: 680px) {
+  .section-head { padding: 24px 20px !important; }
+  .section-head::before {
+    clip-path: polygon(0 16px, 16px 0, calc(50% - 80px) 0, calc(50% - 65px) 6px, calc(50% + 65px) 6px, calc(50% + 80px) 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px, 2px 17px, 2px calc(100% - 17px), 17px calc(100% - 2px), calc(100% - 17px) calc(100% - 2px), calc(100% - 2px) calc(100% - 17px), calc(100% - 2px) 17px, calc(100% - 17px) 2px, calc(50% + 81px) 2px, calc(50% + 65px) 8px, calc(50% - 65px) 8px, calc(50% - 81px) 2px, 17px 2px, 2px 17px);
   }
-
-  let progressObserver = null;
-
-  function initProgressBars() {
-    const bars = $$('.neu-bar-fill[data-pct]', app);
-    if (!bars.length) return;
-
-    bars.forEach(el => el.style.setProperty('--pct', `${el.dataset.pct}%`));
-
-    if (!('IntersectionObserver' in window)) {
-      bars.forEach(el => el.classList.add('filled'));
-      return;
-    }
-
-    if (progressObserver) progressObserver.disconnect();
-    let i = 0;
-    progressObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const el = entry.target;
-          el.style.transitionDelay = `${Math.min(i, 5) * 90}ms`;
-          i += 1;
-          el.classList.add('filled');
-          progressObserver.unobserve(el);
-        }
-      });
-    }, { threshold: 0.35, rootMargin: '0px 0px -6% 0px' });
-
-    bars.forEach(el => progressObserver.observe(el));
+  .section-head::after {
+    clip-path: polygon(15px 0, calc(50% - 79px) 0, calc(50% - 64px) 6px, calc(50% + 64px) 6px, calc(50% + 79px) 0, calc(100% - 15px) 0, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0 calc(100% - 15px), 0 15px);
   }
+}
+/* --- WHITE 3D TRANSPARENT GLASS HUD WITH DUAL GLITCH BORDERS --- */
+.section-head {
+  position: relative !important;
+  padding: 34px 42px !important;
+  margin-bottom: 40px !important;
+  align-items: center !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  isolation: isolate; /* Creates a clean stacking context */
+  overflow: visible;
+  filter: drop-shadow(0 12px 24px rgba(35, 25, 75, 0.12));
+}
 
-  function bindDynamicUI() {
-    $$('.faq-q').forEach(btn => btn.addEventListener('click', () => {
-      const item = btn.closest('.faq-item');
-      const answer = $('.faq-a', item);
-      const open = item.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open ? 'true':'false');
-      answer.style.maxHeight = open ? answer.scrollHeight + 'px' : '0px';
-    }));
+/* 1. The Hollow 3D White Glass Border (Behind) */
+.section-head::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.6) 100%);
+  clip-path: polygon(
+    0 24px, 24px 0, calc(50% - 160px) 0, calc(50% - 140px) 8px, calc(50% + 140px) 8px, calc(50% + 160px) 0, calc(100% - 24px) 0, 100% 24px, 100% calc(100% - 24px), calc(100% - 24px) 100%, 24px 100%, 0 calc(100% - 24px), 0 24px, 
+    2px 25px, 2px calc(100% - 25px), 25px calc(100% - 2px), calc(100% - 25px) calc(100% - 2px), calc(100% - 2px) calc(100% - 25px), calc(100% - 2px) 25px, calc(100% - 25px) 2px, calc(50% + 161px) 2px, calc(50% + 141px) 10px, calc(50% - 141px) 10px, calc(50% - 161px) 2px, 25px 2px, 2px 25px
+  );
+}
 
-    $$('[data-project]').forEach(card => card.addEventListener('click', () => {
-      location.hash = `#/project/${card.dataset.project}`;
-    }));
+/* 2. The Whiter Frosted Glass Surface (Behind) */
+.section-head::after {
+  content: "";
+  position: absolute;
+  inset: 2px; 
+  z-index: -2;
+  background: 
+    repeating-linear-gradient(-45deg, rgba(223, 77, 255, 0.7) 0, rgba(223, 77, 255, 0.7) 2px, transparent 2px, transparent 7px) calc(100% - 30px) calc(100% - 16px) / 24px 8px no-repeat,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.45) 100%);
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  clip-path: polygon(
+    23px 0, calc(50% - 159px) 0, calc(50% - 139px) 8px, calc(50% + 139px) 8px, calc(50% + 159px) 0, calc(100% - 23px) 0, 100% 23px, 100% calc(100% - 23px), calc(100% - 24px) 100%, 23px 100%, 0 calc(100% - 23px), 0 23px
+  );
+}
 
-    $$('[data-creator]').forEach(card => card.addEventListener('click', () => { location.hash = `#/creator/${card.dataset.creator}`; }));
-    $$('[data-service]').forEach(card => card.addEventListener('click', () => { location.hash = `#/service/${card.dataset.service}`; }));
+/* 3. ROTATED BORDERS CONTAINER (FIXED: z-index: 1 pops it above the white box) */
+.section-head > .sh-rotated-border {
+  position: absolute !important;
+  inset: 0;
+  z-index: 1 !important; 
+  pointer-events: none;
+  filter: drop-shadow(0 8px 18px rgba(162, 112, 255, 0.25));
+}
 
-    $$('[data-bento-tile]').forEach(tile => {
-      if (tile.dataset.bentoBound) return;
-      tile.dataset.bentoBound = '1';
-      const open = () => openBentoModal(tile.dataset.bentoTile, tile.dataset.bentoCreator);
-      tile.addEventListener('click', open);
-      tile.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
-    });
+/* Outer Glitch Border */
+.section-head > .sh-rotated-border::before {
+  content: "";
+  position: absolute;
+  inset: -3px; 
+  transform: rotate(0.5deg); 
+  transform-origin: center center;
+  background: linear-gradient(135deg, #a270ff 0%, #4086ff 50%, #ff5be0 100%);
+  
+  clip-path: polygon(
+    0 24px, 24px 0, calc(50% - 160px) 0, calc(50% - 140px) 8px, calc(50% + 140px) 8px, calc(50% + 160px) 0, calc(100% - 24px) 0, 100% 24px, 100% calc(100% - 24px), calc(100% - 24px) 100%, 24px 100%, 0 calc(100% - 24px), 0 24px, 
+    2px 25px, 2px calc(100% - 25px), 25px calc(100% - 2px), calc(100% - 25px) calc(100% - 2px), calc(100% - 2px) calc(100% - 25px), calc(100% - 2px) 25px, calc(100% - 25px) 2px, calc(50% + 161px) 2px, calc(50% + 141px) 10px, calc(50% - 141px) 10px, calc(50% - 161px) 2px, 25px 2px, 2px 25px
+  );
 
-    $$('[data-project-filter]').forEach(btn => btn.addEventListener('click', () => {
-      $$('[data-project-filter]').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      const val = btn.dataset.projectFilter;
-      $('#projectListing').innerHTML = projects.filter(p => val === 'All' || p.category === val).map(projectCard).join('');
-      bindDynamicUI();
-    }));
+  -webkit-mask: 
+    linear-gradient(90deg, #000 0%, #000 12%, transparent 12%, transparent 19%, #000 19%, #000 45%, transparent 45%, transparent 51%, #000 51%, #000 88%, transparent 88%, transparent 92%, #000 92%, #000 100%) top left / 100% 51% no-repeat,
+    linear-gradient(90deg, #000 0%, #000 28%, transparent 28%, transparent 40%, #000 40%, #000 65%, transparent 65%, transparent 70%, #000 70%, #000 100%) bottom left / 100% 51% no-repeat;
+  mask: 
+    linear-gradient(90deg, #000 0%, #000 12%, transparent 12%, transparent 19%, #000 19%, #000 45%, transparent 45%, transparent 51%, #000 51%, #000 88%, transparent 88%, transparent 92%, #000 92%, #000 100%) top left / 100% 51% no-repeat,
+    linear-gradient(90deg, #000 0%, #000 28%, transparent 28%, transparent 40%, #000 40%, #000 65%, transparent 65%, transparent 70%, #000 70%, #000 100%) bottom left / 100% 51% no-repeat;
+}
 
-    $$('[data-toast]').forEach(el => el.addEventListener('click', e => {
-      e.preventDefault(); e.stopPropagation(); showToast(el.dataset.toast);
-    }));
+/* Inner Glitch Border (Smaller, -0.2deg, humongous gaps) */
+.section-head > .sh-rotated-border::after {
+  content: "";
+  position: absolute;
+  inset: 4px; /* Change this (e.g. 2px to 6px) to make the inner box bigger or smaller */
+  transform: rotate(-0.2deg); 
+  transform-origin: center center;
+  z-index: 2;
+  
+  background: linear-gradient(135deg, #ff5be0 0%, #4086ff 50%, #a270ff 100%);
+  
+  clip-path: polygon(
+    0 24px, 24px 0, calc(50% - 160px) 0, calc(50% - 140px) 8px, calc(50% + 140px) 8px, calc(50% + 160px) 0, calc(100% - 24px) 0, 100% 24px, 100% calc(100% - 24px), calc(100% - 24px) 100%, 24px 100%, 0 calc(100% - 24px), 0 24px, 
+    2px 25px, 2px calc(100% - 25px), 25px calc(100% - 2px), calc(100% - 25px) calc(100% - 2px), calc(100% - 2px) calc(100% - 25px), calc(100% - 2px) 25px, calc(100% - 25px) 2px, calc(50% + 161px) 2px, calc(50% + 141px) 10px, calc(50% - 141px) 10px, calc(50% - 161px) 2px, 25px 2px, 2px 25px
+  );
 
-    $$('[data-start-project]').forEach(el => el.addEventListener('click', () => openModal('projectModal')));
-    $$('[data-search-open]').forEach(el => el.addEventListener('click', () => openSearch()));
-    bindMagnetic();
+  -webkit-mask: 
+    linear-gradient(90deg, #000 0%, #000 8%, transparent 8%, transparent 42%, #000 42%, #000 46%, transparent 46%, transparent 88%, #000 88%, #000 100%) top left / 100% 51% no-repeat,
+    linear-gradient(90deg, #000 0%, #000 12%, transparent 12%, transparent 65%, #000 65%, #000 72%, transparent 72%, transparent 96%, #000 96%, #000 100%) bottom left / 100% 51% no-repeat;
+  mask: 
+    linear-gradient(90deg, #000 0%, #000 8%, transparent 8%, transparent 42%, #000 42%, #000 46%, transparent 46%, transparent 88%, #000 88%, #000 100%) top left / 100% 51% no-repeat,
+    linear-gradient(90deg, #000 0%, #000 12%, transparent 12%, transparent 65%, #000 65%, #000 72%, transparent 72%, transparent 96%, #000 96%, #000 100%) bottom left / 100% 51% no-repeat;
+}
+
+/* Ensure Text Stays Safely on Top of All Borders */
+.section-head > div:not(.sh-rotated-border),
+.section-head > a {
+  position: relative;
+  z-index: 5;
+}
+
+/* Mobile adjustments */
+@media (max-width: 680px) {
+  .section-head { padding: 24px 20px !important; }
+  .section-head::before {
+    clip-path: polygon(0 16px, 16px 0, calc(50% - 80px) 0, calc(50% - 65px) 6px, calc(50% + 65px) 6px, calc(50% + 80px) 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px, 2px 17px, 2px calc(100% - 17px), 17px calc(100% - 2px), calc(100% - 17px) calc(100% - 2px), calc(100% - 2px) calc(100% - 17px), calc(100% - 2px) 17px, calc(100% - 17px) 2px, calc(50% + 81px) 2px, calc(50% + 65px) 8px, calc(50% - 65px) 8px, calc(50% - 81px) 2px, 17px 2px, 2px 17px);
   }
-
-  function bindMagnetic() {
-    if (matchMedia('(pointer: coarse)').matches || document.documentElement.dataset.magneticReady) return;
-    document.documentElement.dataset.magneticReady = '1';
-
-    const reset = (el) => {
-      el.style.setProperty('--mag-x', '0px');
-      el.style.setProperty('--mag-y', '0px');
-      el.style.setProperty('--mag-scale', '1');
-      el.style.setProperty('--mag-rot', '0deg');
-    };
-    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-
-    document.addEventListener('pointermove', (e) => {
-      $$('.magnetic').forEach((el) => {
-        const r = el.getBoundingClientRect();
-        const cx = r.left + r.width / 2;
-        const cy = r.top + r.height / 2;
-        const dx = e.clientX - cx;
-        const dy = e.clientY - cy;
-
-        const edgeX = Math.max(Math.abs(dx) - r.width / 2, 0);
-        const edgeY = Math.max(Math.abs(dy) - r.height / 2, 0);
-        const distance = Math.hypot(edgeX, edgeY);
-        const radius = 130;
-
-        if (distance >= radius) {
-          reset(el);
-          return;
-        }
-
-        const strength = Math.pow(1 - distance / radius, 1.7);
-        const x = clamp(dx * 0.34 * strength, -22, 22);
-        const y = clamp(dy * 0.38 * strength, -18, 18);
-        const scale = 1 + (0.07 * strength);
-        const rot = clamp((dx / r.width) * 6 * strength, -6, 6);
-
-        el.style.setProperty('--mag-x', `${x.toFixed(2)}px`);
-        el.style.setProperty('--mag-y', `${y.toFixed(2)}px`);
-        el.style.setProperty('--mag-scale', scale.toFixed(4));
-        el.style.setProperty('--mag-rot', `${rot.toFixed(2)}deg`);
-      });
-    }, { passive: true });
-
-    document.addEventListener('pointerdown', (e) => {
-      const el = e.target.closest('.magnetic');
-      if (el) el.style.setProperty('--mag-scale', '.94');
-    });
-    document.addEventListener('pointerup', (e) => {
-      const el = e.target.closest('.magnetic');
-      if (el) el.style.setProperty('--mag-scale', '1.07');
-    });
-    window.addEventListener('blur', () => $$('.magnetic').forEach(reset));
-    document.documentElement.addEventListener('mouseleave', () => $$('.magnetic').forEach(reset));
+  .section-head::after {
+    clip-path: polygon(15px 0, calc(50% - 79px) 0, calc(50% - 64px) 6px, calc(50% + 64px) 6px, calc(50% + 79px) 0, calc(100% - 15px) 0, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0 calc(100% - 15px), 0 15px);
   }
-
-  function openModal(id) {
-    const modal = document.getElementById(id);
-    if (!modal) return;
-    modal.hidden = false;
-    document.body.style.overflow = 'hidden';
-    requestAnimationFrame(() => $('input,textarea,select,button', modal)?.focus());
-  }
-  function closeModal(id) {
-    const modal = document.getElementById(id);
-    if (!modal) return;
-    modal.hidden = true;
-    document.body.style.overflow = '';
-  }
-  function openSearch() {
-    openModal('searchModal');
-    const input = $('#globalSearchInput');
-    input.value='';
-    renderSearchResults('');
-    setTimeout(()=>input.focus(),10);
-  }
-
-  function renderSearchResults(q) {
-    const query = q.trim().toLowerCase();
-    let pool = [
-      ...projects.map(x=>({type:'Project',title:x.title,sub:x.creator,href:x.id==='aether'?'#/service/unity-game-development':'#/projects'})),
-      ...creators.map(x=>({type:'Creator',title:x.name,sub:x.role,href:`#/creator/${x.key}`})),
-      ...services.map(x=>({type:'Service',title:x.title,sub:`Starting at ₹${fmt(x.price)}`,href:`#/service/${x.key}`}))
-    ];
-    if (query) pool = pool.filter(x => `${x.title} ${x.sub} ${x.type}`.toLowerCase().includes(query));
-    pool = pool.slice(0,8);
-    $('#searchResults').innerHTML = pool.length ? pool.map(x=>`<a class="search-result" href="${x.href}" data-search-result><span><span class="result-type">${x.type}</span><br><b>${x.title}</b><br><small>${x.sub}</small></span><span>→</span></a>`).join('') : `<div class="empty-state" style="padding:24px"><p>No results found. Try another keyword.</p></div>`;
-    $$('[data-search-result]').forEach(a=>a.addEventListener('click',()=>closeModal('searchModal')));
-  }
-
-  let toastTimer;
-  function showToast(msg) {
-    const t = $('#toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=>t.classList.remove('show'),2400);
-  }
-
-  document.addEventListener('click', e => {
-    const close = e.target.closest('[data-modal-close]');
-    if (close) closeModal(close.dataset.modalClose);
-    if (e.target.classList.contains('modal-backdrop')) closeModal(e.target.id);
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      closeModal('searchModal'); closeModal('projectModal');
-      const menu = $('#mobileMenu'); if (!menu.hidden) toggleMobileMenu(false);
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
-  });
-
-  $('#globalSearchInput').addEventListener('input', e => renderSearchResults(e.target.value));
-  $('#projectForm').addEventListener('submit', e => {
-    e.preventDefault();
-    closeModal('projectModal');
-    showToast('Draft created — connect this form to your backend to save it.');
-    e.target.reset();
-  });
-
-  function toggleMobileMenu(force) {
-    const menu = $('#mobileMenu');
-    const backdrop = $('#mobileMenuBackdrop');
-    const btn = $('#mobileMenuBtn');
-    const next = typeof force === 'boolean' ? force : menu.hidden;
-    menu.hidden = !next;
-    if (backdrop) {
-      backdrop.hidden = !next;
-      requestAnimationFrame(() => backdrop.classList.toggle('show', next));
-    }
-    btn.setAttribute('aria-expanded', next ? 'true':'false');
-    document.body.style.overflow = next ? 'hidden' : '';
-    document.documentElement.style.overflow = next ? 'hidden' : '';
-  }
-  $('#mobileMenuBtn').addEventListener('click', () => toggleMobileMenu());
-  $('#mobileMenu').addEventListener('click', e => { if (e.target.closest('a,button')) toggleMobileMenu(false); });
-  $('#mobileMenuBackdrop')?.addEventListener('click', () => toggleMobileMenu(false));
-
-  let scrollTicking = false;
-  window.addEventListener('scroll', () => {
-    if (scrollTicking) return;
-    scrollTicking = true;
-    requestAnimationFrame(() => {
-      $('#siteHeader').classList.toggle('scrolled', scrollY > 20);
-      scrollTicking = false;
-    });
-  }, {passive:true});
-  window.addEventListener('hashchange', () => { closeModal('bentoModal'); renderRoute(); });
-
-  renderRoute();
-  bindMagnetic();
-})();
+}
