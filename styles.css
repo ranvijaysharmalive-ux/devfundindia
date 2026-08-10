@@ -25,7 +25,7 @@
 *{box-sizing:border-box}
 /* Update this rule at the top of your CSS */
 html {
-  background: var(--bg);
+ background: transparent;
 }
 body{
   margin:0;
@@ -84,9 +84,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .icon-btn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .header-actions .btn-primary{min-height:44px;padding:0 20px;font-size:14px}
 .mobile-menu-btn{display:none}
-.mobile-menu{position:absolute;top:96px;left:16px;right:16px;max-width:520px;margin:auto;padding:12px;display:grid;gap:6px}
-.mobile-menu a,.mobile-menu>button:not(.btn){padding:13px 14px;border:0;background:transparent;border-radius:14px;text-align:left;font-weight:700}
-.mobile-menu a:hover,.mobile-menu>button:not(.btn):hover{background:rgba(255,255,255,.64)}
+.mobile-menu-backdrop{position:fixed;inset:0;z-index:49;background:rgba(15,12,28,.38);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .22s ease}
+.mobile-menu-backdrop.show{opacity:1;pointer-events:auto}
+.mobile-menu{
+  position:absolute;top:96px;left:16px;right:16px;max-width:520px;margin:auto;padding:12px;display:grid;gap:6px;
+  z-index:51;
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(24px) saturate(160%);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+  box-shadow:0 24px 60px rgba(40,30,80,.28),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.mobile-menu a,.mobile-menu>button:not(.btn){padding:13px 14px;border:0;background:transparent;border-radius:14px;text-align:left;font-weight:700;color:var(--ink)}
+.mobile-menu a:hover,.mobile-menu>button:not(.btn):hover{background:rgba(111,63,245,.1)}
 
 .btn{min-height:48px;border:0;border-radius:14px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:800;cursor:pointer;transition:box-shadow .22s ease,background .22s ease,border-color .22s ease;position:relative;isolation:isolate}
 /* Magnetic buttons: JS writes --mag-x/--mag-y/--mag-scale, this is what actually moves them.
@@ -557,6 +566,17 @@ main{min-height:70vh;outline:none}
 .pixel-terrain.right{right:0}
 @media (max-width:1240px){.pixel-terrain{display:none}}
 
+/* Large floating background scenery (.custom-pixel-art) and the 30 scattered
+   mini icons (.scatter-icon) are sized with vw + fixed minimums that only make
+   sense on wide screens. On phones/tablets they overflow the page horizontally
+   and bleed on top of headings, so they're toned down / removed below. */
+@media (max-width:900px){
+  .custom-pixel-art{display:none!important}
+}
+@media (max-width:680px){
+  .scatter-icon{display:none!important}
+}
+
 /* extra floating icons layered on the hero card — additive only */
 .hero-decor{position:absolute;pointer-events:none;z-index:4;filter:drop-shadow(0 10px 20px rgba(60,40,110,.18));animation:decorFloat 5s ease-in-out infinite alternate}
 .hero-decor svg{width:100%;height:100%;display:block}
@@ -620,290 +640,313 @@ main{min-height:70vh;outline:none}
 .sd-pixelguy{width:26px}
 
 /* ============================================================
-   PHASE 1 REDESIGN — "Modern Indian indie game-dev hub"
-   Moves away from premium-crowdfunding/glassmorphism toward a
-   game-launcher / dev-tool / community-platform feel.
-   Additive: nothing above is deleted, everything here overrides.
+   GAME-HUB DECOR — PHASE 4: mesh-gradient blobs that scroll
+   with content, so the colourful mesh extends down every
+   section of the page (not just the fixed viewport layer)
+   ============================================================ */
+.section-mesh{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;z-index:0;mix-blend-mode:multiply;animation:floatOrb 18s ease-in-out infinite alternate}
+.sm-purple{background:#c9a9ff}
+.sm-pink{background:#ffb3d9}
+.sm-blue{background:#a8d4ff}
+.sm-mint{background:#9ff7cf}
+.sm-amber{background:#ffd9a0}
+.sm-sm{width:220px;height:220px;opacity:.4}
+.sm-md{width:320px;height:320px;opacity:.36}
+.sm-lg{width:420px;height:420px;opacity:.32}
+.sm-tl{top:-10%;left:-6%}
+.sm-tr{top:-10%;right:-6%}
+.sm-bl{bottom:-12%;left:-6%}
+.sm-br{bottom:-12%;right:-6%}
+.sm-mid{top:30%;left:38%}
+@media (max-width:680px){.section-mesh{display:none}}
+
+/* ============================================================
+   FIX — stop the elastic "overscroll bounce" past the real end
+   of the page, which was revealing the fixed mesh-gradient /
+   decor layer as a blank extra screen after the footer.
+   Purely additive: nothing above is removed or changed.
+   ============================================================ */
+html,body{overscroll-behavior-y:none;height:100%}
+html{overflow-x:hidden}
+/* .page-shell{overflow-x:clip}  <-- Removed to stop clipping the hero shadow */
+/* --- FIX: Remove massive blank space at the bottom of the page --- */
+html, body {
+  height: auto !important; /* Fixes background getting cut off */
+  min-height: 100vh;
+}
+
+.page-shell {
+  padding-bottom: 0 !important; /* Removes the 64px empty block after the footer */
+}
+
+.site-footer {
+  padding-bottom: 12px !important; /* Pulls the bottom edge tight against the copyright text */
+}
+/* --- FIX: Compact Mobile Profile & Bento Grids --- */
+
+/* For Tablets & Large Phones (Below 680px) */
+@media (max-width: 680px) {
+  /* Make the lower detail section a compact 2-column grid */
+  .creator-bento {
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-auto-rows: auto !important;
+    gap: 10px !important;
+  }
+  
+  /* Make the boxes physically smaller */
+  .cb-tile { 
+    min-height: 120px !important; 
+    padding: 15px !important; 
+  }
+  
+  /* Wide tiles span both columns, tall tiles are forced to be standard height on mobile */
+  .cb-w2 { grid-column: span 2 !important; }
+  .cb-h2 { grid-row: span 1 !important; } 
+  
+  /* Shrink text and icons inside the detail tiles */
+  .cb-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .cb-icon svg { width: 16px; height: 16px; }
+  .cb-tile h3 { font-size: 16px !important; margin-bottom: 4px; }
+  .cb-tile.cb-w2 h3 { font-size: 17px !important; }
+  .cb-desc { font-size: 11.5px !important; line-height: 1.4 !important; }
+  .cb-eyebrow { font-size: 9.5px !important; margin-bottom: 4px; }
+}
+
+/* For Small Phones (Below 430px) */
+@media (max-width: 430px) {
+  /* Force the top counting metrics into a 2x2 grid instead of a 1-column vertical stack */
+  .profile-bento {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  
+  /* Keep the main profile card and bottom verification card full-width */
+  .pb-profile { grid-column: span 2 !important; padding: 16px !important; }
+  .pb-verify { grid-column: span 2 !important; padding: 16px !important; display: block; text-align: left; }
+  
+  /* Shrink the counting metric boxes */
+  .pb-metric { padding: 12px !important; }
+  .pb-metric-value { font-size: 20px !important; }
+  .pb-metric-label { font-size: 10px !important; }
+}
+/* --- FIX: Compact Analytics & Trust Section for Mobile --- */
+
+@media (max-width: 680px) {
+  /* Reduce the massive padding inside all neumorphic cards */
+  .neu-card { 
+    padding: 16px !important; 
+    border-radius: 20px !important;
+  }
+  
+  /* Force Completion Rate & Avg Response to stay side-by-side */
+  .neu-row-2 { 
+    grid-template-columns: 1fr 1fr !important; 
+    gap: 12px !important; 
+  }
+  .neu-big-sm { 
+    font-size: 22px !important; 
+    margin: 4px 0 6px !important; 
+  }
+  .neu-small p { 
+    font-size: 11px !important; 
+  }
+
+  /* Make the graph shorter so it doesn't waste vertical space */
+  .fake-chart { 
+    height: 60px !important; 
+    margin-top: 8px !important; 
+  }
+  .neu-trend-head span.muted { 
+    font-size: 11px !important; 
+  }
+
+  /* Tighten up the list with location/language/verification */
+  .neu-info { 
+    gap: 10px !important; 
+  }
+  .neu-info-row { 
+    font-size: 11.5px !important; 
+    gap: 10px !important; 
+  }
+  .neu-info-icon { 
+    width: 26px !important; 
+    height: 26px !important; 
+    border-radius: 8px !important; 
+  }
+}
+
+@media (max-width: 430px) {
+  /* Force the Experience/Projects/Orders boxes into a 3-column row instead of 3 huge stacked rows */
+  .neu-exp-cells { 
+    grid-template-columns: repeat(3, 1fr) !important; 
+    gap: 8px !important; 
+    margin-top: 12px !important;
+  }
+  .neu-exp-cell { 
+    padding: 10px 4px !important; 
+    border-radius: 14px !important;
+  }
+  .neu-exp-cell svg { 
+    width: 16px !important; 
+    height: 16px !important; 
+  }
+  .neu-exp-cell b { 
+    font-size: 16px !important; 
+    margin-top: 4px !important; 
+  }
+  .neu-exp-cell small { 
+    font-size: 9.5px !important; 
+    letter-spacing: -0.02em;
+  }
+}
+/* --- FIX: 3D PURE GLASS FOOTER --- */
+.site-footer {
+  /* 1. Base Glass Material */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.02)) !important;
+  backdrop-filter: blur(35px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(180%) !important;
+  
+  /* 2. The 3D Rim (Brighter top edge, faint side edges) */
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.8) !important; 
+  border-bottom: none !important;
+  
+  /* 3. The Depth (Outer elevation + Thick inner highlight + Ambient inner glow) */
+  box-shadow: 
+    0 -20px 50px rgba(30, 20, 60, 0.1),         /* Lifts it off the background */
+    inset 0 2px 4px rgba(255, 255, 255, 0.8),   /* Creates the thick glass lip */
+    inset 0 -10px 30px rgba(255, 255, 255, 0.1) !important; /* Soft internal volume */
+  
+  /* Shaping */
+  border-radius: 40px 40px 0 0 !important;
+  padding: 56px 48px 24px !important;
+  position: relative;
+  z-index: 10;
+}
+
+/* Mobile adjustments remain the same */
+@media (max-width: 680px) {
+  .site-footer {
+    padding: 40px 24px 20px !important;
+    border-radius: 28px 28px 0 0 !important;
+  }
+}
+
+/* ============================================================
+   FINAL SCROLL-BOUNDARY FIX
+   Keeps decorative mesh / GSAP art from creating scrollable
+   overflow below the real footer.
+   ============================================================ */
+html {
+  overflow-x: clip !important;
+  overscroll-behavior-y: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: clip !important;
+  overscroll-behavior-y: none;
+}
+
+#app {
+  position: relative;
+  overflow: clip !important;
+}
+
+.page-shell {
+  padding-bottom: 0 !important;
+}
+
+.site-footer {
+  margin-bottom: 0 !important;
+}
+
+/* These are visual effects only; they must never define page height. */
+.mesh-bg,
+.decor-layer,
+.pixel-terrain {
+  pointer-events: none;
+}
+
+/* ============================================================
+   SINGLE CONTINUOUS MESH BACKGROUND
+   ------------------------------------------------------------
+   The old design had TWO mesh systems:
+   1) .mesh-bg (full viewport)
+   2) .section-mesh (inside .page-shell sections)
+
+   .page-shell clips horizontal overflow, so the blurred section
+   meshes were cut at the max-width container edges and produced
+   the visible vertical colour seams on BOTH sides.
+
+   Keep only the full-screen .mesh-bg. This guarantees one
+   uninterrupted gradient from the left edge to the right edge.
    ============================================================ */
 
-:root{
-  /* tighter, more "product UI" radii */
-  --radius:20px;
-  --radius-sm:12px;
-  --radius-xs:8px;
-
-  /* dark charcoal surface system for game/community sections */
-  --ink-dark:#0d0d12;
-  --surface-dark:#15151d;
-  --surface-dark-2:#1b1b26;
-  --line-dark:rgba(255,255,255,.08);
-  --text-dark-primary:#f3f2f8;
-  --text-dark-muted:#9997a8;
-
-  /* accent roles used across new components */
-  --accent-cyan:#3fd0e0;
-  --accent-green:#2fbf7a;
-  --accent-amber:#f0a93f;
-  --accent-red:#e5546f;
+.section-mesh {
+  display: none !important;
 }
 
-/* Turn down the mesh/orb/decor system — it read as "generic gaming demo".
-   Keep the elements in the DOM (non-destructive) but stop them competing
-   with real content. A faint static grid replaces the animated blur blobs. */
-.mesh-bg{
+/* Content containers must not paint their own page-sized gradient layer. */
+.page-shell,
+.section,
+.section-tight,
+.route-hero,
+main#app {
+  background: transparent !important;
+}
+
+/* One continuous viewport-wide mesh only. */
+.mesh-bg {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  z-index: -2 !important;
   background:
-    linear-gradient(180deg,#faf9fc 0%,#f6f5f9 100%);
-}
-.mesh-bg .mesh-orb{display:none}
-.mesh-bg .noise{opacity:.012}
-.decor-layer,.pixel-terrain,.hero-decor,.section-decor{display:none}
-.pixel-field{display:none}
-
-/* Subtle technical grid backdrop for content-dense pages — used selectively
-   via .grid-atmo on specific sections rather than globally */
-.grid-atmo{position:relative}
-.grid-atmo:before{
-  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-  background-image:
-    linear-gradient(rgba(111,63,245,.05) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(111,63,245,.05) 1px,transparent 1px);
-  background-size:34px 34px;
-  mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 40%,transparent 90%);
+    radial-gradient(circle at 8% 18%, rgba(201,169,255,.52), transparent 34%),
+    radial-gradient(circle at 88% 14%, rgba(168,185,255,.48), transparent 34%),
+    radial-gradient(circle at 86% 62%, rgba(255,179,217,.42), transparent 33%),
+    radial-gradient(circle at 18% 78%, rgba(159,247,207,.34), transparent 34%),
+    radial-gradient(circle at 58% 88%, rgba(255,207,138,.28), transparent 32%),
+    linear-gradient(150deg,#f0e6ff 0%,#e6ecff 26%,#ffe9f6 55%,#e3fff2 78%,#fff3e0 100%) !important;
 }
 
-/* Flatten the glass system: thinner blur, thinner border, tighter shadow */
-.glass-card,.glass-panel{
-  backdrop-filter:blur(8px) saturate(120%);
-  -webkit-backdrop-filter:blur(8px) saturate(120%);
-  border:1px solid rgba(64,47,120,.09);
-  box-shadow:0 2px 10px rgba(40,32,70,.06);
-  border-radius:var(--radius-sm);
-}
-.glow-card:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(40,32,70,.1);}
-.glow-card:after{display:none}
-
-/* Dense/flat card variant for the new game-dev components */
-.flat-card{
-  background:#fff;
-  border:1px solid rgba(64,47,120,.1);
-  border-radius:var(--radius-sm);
-  box-shadow:0 1px 3px rgba(30,24,58,.05);
-  transition:.18s ease;
-}
-.flat-card:hover{border-color:rgba(111,63,245,.35);box-shadow:0 8px 22px rgba(40,32,70,.09);transform:translateY(-2px)}
-
-/* ---------- Dark section wrapper (game-launcher feel) ---------- */
-.section-dark{
-  background:var(--ink-dark);
-  color:var(--text-dark-primary);
-  border-radius:28px;
-  padding:44px clamp(18px,3vw,40px);
-  margin:0 0 8px;
-  position:relative;
-  overflow:hidden;
-}
-.section-dark:before{
-  content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
-  background-size:28px 28px;
-  mask-image:radial-gradient(ellipse 70% 60% at 15% 0%,#000 30%,transparent 85%);
-}
-.section-dark .section-head h2,.section-dark .section-head p{color:var(--text-dark-primary)}
-.section-dark .section-head p{color:var(--text-dark-muted)}
-.section-dark .eyebrow{color:var(--accent-cyan)}
-.section-dark .text-link{color:var(--accent-cyan)}
-.section-dark .muted{color:var(--text-dark-muted)}
-
-/* ---------- Meta chips: engine / platform / genre / status ---------- */
-.meta-chips{display:flex;flex-wrap:wrap;gap:6px}
-.meta-chip{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:3px 9px;border-radius:6px;
-  font-size:11px;font-weight:750;letter-spacing:.01em;
-  background:rgba(111,63,245,.09);color:#6f3ff5;
-  border:1px solid rgba(111,63,245,.16);
-}
-.meta-chip.tone-cyan{background:rgba(63,208,224,.12);color:#0f8a97;border-color:rgba(63,208,224,.22)}
-.meta-chip.tone-green{background:rgba(47,191,122,.12);color:#0d8a53;border-color:rgba(47,191,122,.22)}
-.meta-chip.tone-amber{background:rgba(240,169,63,.14);color:#95660e;border-color:rgba(240,169,63,.24)}
-.meta-chip.tone-red{background:rgba(229,84,111,.12);color:#c22a47;border-color:rgba(229,84,111,.22)}
-.meta-chip.on-dark{background:rgba(255,255,255,.08);color:#e6e4ef;border-color:rgba(255,255,255,.12)}
-
-/* ---------- Game cards (Trending Games) ---------- */
-.game-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.game-card{border-radius:var(--radius-xs);overflow:hidden;cursor:pointer;background:var(--surface-dark-2);border:1px solid var(--line-dark)}
-.game-media{height:150px;position:relative;overflow:hidden;background:linear-gradient(150deg,#232333,#181822)}
-.game-media img{width:100%;height:100%;object-fit:cover;transition:.4s ease}
-.game-card:hover .game-media img{transform:scale(1.06)}
-.game-status-chip{position:absolute;left:9px;top:9px;z-index:1}
-.game-body{padding:13px 14px 15px}
-.game-body h3{margin:0 0 4px;font-size:14.5px;color:var(--text-dark-primary);letter-spacing:-.01em;line-height:1.3}
-.game-dev{font-size:12px;color:var(--text-dark-muted);margin:0 0 9px}
-.game-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11.5px;color:var(--text-dark-muted)}
-.game-foot .followers{display:flex;align-items:center;gap:4px}
-
-/* ---------- Rising creators strip (compact, dense) ---------- */
-.rc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.rc-card{display:flex;gap:13px;padding:16px;align-items:flex-start;cursor:pointer}
-.rc-avatar{width:52px;height:52px;border-radius:14px;object-fit:cover;background:linear-gradient(135deg,#eee8ff,#e4eaff);color:#6f3ff5;display:grid;place-items:center;font-weight:900;font-size:17px;flex:0 0 auto}
-.rc-body h3{margin:0 0 2px;font-size:15px;letter-spacing:-.015em}
-.rc-role{font-size:12px;color:var(--muted);margin:0 0 8px}
-.rc-skills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
-.rc-skill{font-size:10.5px;font-weight:700;background:rgba(64,47,120,.06);color:#5c5a68;padding:2px 7px;border-radius:5px}
-.rc-stats{display:flex;gap:14px;font-size:11.5px;color:var(--muted)}
-.rc-stats b{color:var(--ink)}
-
-/* ---------- Find talent categories ---------- */
-.talent-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.talent-chip{
-  display:flex;flex-direction:column;gap:8px;padding:16px 14px;
-  border-radius:var(--radius-xs);cursor:pointer;text-align:left;
-}
-.talent-chip .ti{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:rgba(111,63,245,.1);color:#6f3ff5}
-.talent-chip .ti svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
-.talent-chip span{font-size:12.5px;font-weight:800;letter-spacing:-.01em}
-
-/* ---------- Asset marketplace preview cards ---------- */
-.asset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.asset-card{border-radius:var(--radius-xs);overflow:hidden;cursor:pointer}
-.asset-media{height:130px;background:linear-gradient(150deg,#f2eefc,#eaeefb);position:relative;overflow:hidden}
-.asset-media img{width:100%;height:100%;object-fit:cover}
-.asset-body{padding:12px 13px 14px}
-.asset-body h4{margin:0 0 6px;font-size:13.5px;line-height:1.3;letter-spacing:-.01em}
-.asset-rating{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);margin-bottom:9px}
-.asset-rating b{color:var(--ink)}
-.asset-price-row{display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(64,47,120,.08);padding-top:9px}
-.asset-price{font-weight:900;color:var(--purple);font-size:14px}
-
-/* ---------- Active projects (compact funding cards) ---------- */
-.aproj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.aproj-card{border-radius:var(--radius-xs);overflow:hidden;cursor:pointer}
-.aproj-media{height:120px;position:relative;overflow:hidden;background:linear-gradient(150deg,#efeafd,#e9edfb)}
-.aproj-media img{width:100%;height:100%;object-fit:cover}
-.aproj-body{padding:14px 15px 16px}
-.aproj-body h4{margin:0 0 5px;font-size:14.5px;letter-spacing:-.01em}
-.aproj-dev{font-size:11.5px;color:var(--muted);margin:0 0 10px}
-.aproj-progress{height:6px;border-radius:999px;background:rgba(64,47,120,.08);overflow:hidden;margin-bottom:6px}
-.aproj-progress>span{display:block;height:100%;background:linear-gradient(90deg,#8a4cf7,#5550ea)}
-.aproj-meta-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
-.aproj-meta-row b{color:var(--ink)}
-
-/* ---------- Creator market preview ---------- */
-.market-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.market-card{border-radius:var(--radius-xs);padding:16px 17px;background:var(--surface-dark-2);border:1px solid var(--line-dark);cursor:pointer}
-.market-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
-.market-avatar{width:38px;height:38px;border-radius:10px;object-fit:cover;background:linear-gradient(135deg,#584df1,#8a4cf7);display:grid;place-items:center;color:#fff;font-weight:900;font-size:13px}
-.market-name{font-size:13.5px;font-weight:800;color:var(--text-dark-primary);margin:0 0 2px}
-.market-index{font-size:11px;color:var(--text-dark-muted)}
-.market-price-row{display:flex;justify-content:space-between;align-items:baseline}
-.market-price{font-size:19px;font-weight:900;color:var(--text-dark-primary)}
-.market-change{font-size:12.5px;font-weight:800}
-.market-change.up{color:var(--accent-green)}
-.market-change.down{color:var(--accent-red)}
-.market-spark{height:34px;margin-top:10px;display:flex;align-items:flex-end;gap:2px}
-.market-spark span{flex:1;border-radius:2px 2px 0 0;background:rgba(111,63,245,.4)}
-.market-card:hover .market-spark span{background:var(--purple)}
-.cc-note{font-size:11px;color:var(--text-dark-muted);margin-top:14px}
-
-/* ---------- Game jams ---------- */
-.jam-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.jam-card{border-radius:var(--radius-xs);padding:20px 21px;display:flex;flex-direction:column;gap:12px;cursor:pointer}
-.jam-status-row{display:flex;justify-content:space-between;align-items:center}
-.jam-card h4{margin:0;font-size:16px;letter-spacing:-.015em}
-.jam-theme{font-size:12.5px;color:var(--muted)}
-.jam-stats{display:flex;gap:18px;font-size:12px;color:var(--muted)}
-.jam-stats b{color:var(--ink);font-size:14px;display:block}
-
-/* ---------- Community activity feed ---------- */
-.activity-feed{display:flex;flex-direction:column;gap:1px;border-radius:var(--radius-xs);overflow:hidden;background:rgba(64,47,120,.08)}
-.activity-item{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;background:#fff}
-.activity-avatar{width:36px;height:36px;border-radius:10px;object-fit:cover;background:linear-gradient(135deg,#eee8ff,#e4eaff);color:#6f3ff5;display:grid;place-items:center;font-weight:900;font-size:12px;flex:0 0 auto}
-.activity-body p{margin:0 0 3px;font-size:13.5px;line-height:1.4}
-.activity-body p b{font-weight:800}
-.activity-time{font-size:11px;color:var(--muted)}
-.activity-type-tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#6f3ff5;background:rgba(111,63,245,.08);padding:2px 7px;border-radius:5px;margin-left:6px}
-
-/* ---------- Nav "More" dropdown ---------- */
-.nav-more{position:relative}
-.nav-more-panel{
-  position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%);
-  background:#fff;border:1px solid rgba(64,47,120,.1);border-radius:14px;
-  box-shadow:0 18px 40px rgba(40,32,70,.14);
-  padding:8px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px;min-width:340px;
-  z-index:60;
-}
-.nav-more-panel a{padding:9px 12px;border-radius:9px;font-size:13.5px;font-weight:700;color:#4a4956;white-space:nowrap}
-.nav-more-panel a:hover{background:rgba(111,63,245,.08);color:#6f3ff5}
-
-@media (max-width:1180px){
-  .game-grid{grid-template-columns:repeat(3,1fr)}
-  .asset-grid{grid-template-columns:repeat(3,1fr)}
-  .talent-grid{grid-template-columns:repeat(3,1fr)}
-}
-@media (max-width:900px){
-  .rc-grid,.aproj-grid,.market-grid{grid-template-columns:repeat(2,1fr)}
-  .jam-grid{grid-template-columns:1fr}
-  .nav-more-panel{grid-template-columns:1fr;min-width:220px}
-}
-@media (max-width:680px){
-  .game-grid,.asset-grid{grid-template-columns:repeat(2,1fr)}
-  .talent-grid{grid-template-columns:repeat(2,1fr)}
-  .rc-grid,.aproj-grid,.market-grid{grid-template-columns:1fr}
-  .section-dark{border-radius:18px;padding:30px 16px}
+/*
+  Keep page-shell clipping if needed for non-background decorative
+  elements, but there are now no section gradient blobs to expose
+  that clipping boundary.
+*/
+/* Dark Container styling */
+.section-dark {
+  background: var(--ink-dark);
+  color: var(--text-dark-primary);
+  border-radius: 28px;
+  padding: 44px clamp(18px, 3vw, 40px);
+  margin: 0 0 8px;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Hero: tone down the gradient-slide + shrink the stat claims block so the
-   homepage doesn't lead with funding stats (see product-feel requirement) */
-.hero-sub{max-width:600px}
-.demo-note{font-size:11px;color:var(--muted);margin-top:10px;letter-spacing:.02em}
+/* Rising Creators Grid */
+.rc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.rc-card { display: flex; gap: 13px; padding: 16px; align-items: flex-start; cursor: pointer; }
 
-/* ---------- Freelance jobs board ---------- */
-.job-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.job-card{padding:20px 21px;cursor:pointer;display:flex;flex-direction:column;gap:11px}
-.job-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.job-card-top h3{margin:0;font-size:15.5px;letter-spacing:-.015em;line-height:1.3}
-.job-budget{font-weight:900;color:var(--purple);font-size:13.5px;white-space:nowrap}
-.job-desc{color:var(--muted);font-size:12.5px;line-height:1.5;margin:0}
-.job-skills{display:flex;flex-wrap:wrap;gap:5px}
-.job-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11.5px;color:var(--muted);border-top:1px solid rgba(64,47,120,.08);padding-top:10px;margin-top:2px}
-.job-client{color:#4a4854;font-weight:700}
-.job-detail-desc{font-size:15px;line-height:1.65;color:#3c3a45;margin:10px 0 0}
+/* Find Talent Grid */
+.talent-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 
-/* ---------- Functional project tabs (Story / Updates / Rewards / Roadmap / Team / Risks) ---------- */
-.tab-panel{display:none;margin-top:24px}
-.tab-panel.active{display:block}
-.reward-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.reward-tier{padding:20px 21px;display:flex;flex-direction:column;gap:8px}
-.reward-tier-amt{font-size:21px;font-weight:900;color:var(--purple)}
-.reward-tier h4{margin:0;font-size:15px}
-.reward-tier p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.5}
-.reward-tier-foot{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);border-top:1px solid rgba(64,47,120,.08);padding-top:10px;margin-top:2px}
-.roadmap-list{display:flex;flex-direction:column}
-.roadmap-item{display:flex;gap:14px;padding:14px 0;border-top:1px solid rgba(73,55,126,.08)}
-.roadmap-item:first-child{border-top:0}
-.roadmap-dot{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:0 0 auto;background:rgba(111,63,245,.16);border:2px solid var(--purple)}
-.roadmap-dot.done{background:var(--purple)}
-.roadmap-body b{display:block;font-size:14px}
-.roadmap-body span{color:var(--muted);font-size:12px}
-.update-card{padding:18px 20px;margin-bottom:12px}
-.update-card:last-child{margin-bottom:0}
-.update-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
-.update-head b{font-size:14.5px}
-.update-head span{color:var(--muted);font-size:11.5px;white-space:nowrap}
-.update-card p{margin:8px 0 0;color:#5f5e68;font-size:13px;line-height:1.55}
-.team-mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-.team-mini{display:flex;gap:11px;align-items:center;padding:16px}
-.team-mini b{display:block;font-size:13.5px}
-.team-mini span{color:var(--muted);font-size:11.5px}
-.risk-list{display:flex;flex-direction:column;gap:10px}
-.risk-item{display:flex;gap:12px;padding:16px 18px;align-items:flex-start}
-.risk-item svg{width:16px;height:16px;flex:0 0 auto;margin-top:2px;stroke:#c9822e;fill:none;stroke-width:1.8}
-.risk-item p{margin:0;font-size:13px;line-height:1.6;color:#4a4854}
+/* Asset Marketplace Grid */
+.asset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 
-@media (max-width:1180px){
-  .job-grid{grid-template-columns:repeat(2,1fr)}
-}
-@media (max-width:680px){
-  .job-grid{grid-template-columns:1fr}
-  .reward-grid,.team-mini-grid{grid-template-columns:1fr}
-}
+/* Creator Market Grid */
+.market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+/* Game Jams Grid */
+.jam-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+
+/* Community Activity Feed */
+.activity-feed { display: flex; flex-direction: column; gap: 1px; border-radius: var(--radius-xs); overflow: hidden; background: rgba(64,47,120,.08); }
+.activity-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; background: #fff; }
