@@ -8,7 +8,11 @@
   <title>DevFund India — Build, Fund & Create</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  
 </head>
+
 <body>
   <div class="mesh-bg" aria-hidden="true">
     <span class="mesh-orb orb-a"></span>
@@ -35,50 +39,67 @@
       <span class="decor-icon decor-checker-mid"><svg viewBox="0 0 40 40"><g fill="#8b5cf6"><rect x="0" y="0" width="8" height="8"/><rect x="16" y="0" width="8" height="8"/><rect x="8" y="8" width="8" height="8"/><rect x="24" y="8" width="8" height="8"/><rect x="0" y="16" width="8" height="8"/><rect x="16" y="16" width="8" height="8"/><rect x="8" y="24" width="8" height="8"/><rect x="24" y="24" width="8" height="8"/></g></svg></span>
     </div>
 
-    <!-- Pixel-art corner terrain — evokes a game world, purely decorative -->
-    <svg class="pixel-terrain left" width="220" height="170" viewBox="0 0 220 170" xmlns="http://www.w3.org/2000/svg">
-      <g fill="#c9b6f5">
-        <rect x="0" y="130" width="220" height="40"/><rect x="0" y="110" width="180" height="20"/>
-        <rect x="0" y="90" width="140" height="20"/><rect x="0" y="70" width="100" height="20"/>
-        <rect x="0" y="50" width="60" height="20"/><rect x="0" y="30" width="30" height="20"/>
-      </g>
-      <g fill="#a689ee">
-        <rect x="0" y="150" width="220" height="20"/><rect x="0" y="130" width="180" height="20"/>
-        <rect x="0" y="110" width="140" height="20"/><rect x="0" y="90" width="100" height="20"/>
-        <rect x="0" y="70" width="60" height="20"/>
-      </g>
-      <g fill="#7fe7a8">
-        <rect x="0" y="126" width="30" height="6"/><rect x="34" y="106" width="26" height="6"/>
-        <rect x="64" y="86" width="34" height="6"/><rect x="102" y="66" width="26" height="6"/>
-      </g>
-      <g><rect x="12" y="120" width="6" height="6" fill="#ef5bb5"/><rect x="46" y="100" width="6" height="6" fill="#f6b51f"/><rect x="80" y="80" width="6" height="6" fill="#ef5bb5"/></g>
-      <g transform="translate(150,88)">
-        <rect x="6" y="0" width="12" height="8" fill="#5a3b22"/><rect x="6" y="8" width="12" height="8" fill="#f4c299"/>
-        <rect x="4" y="16" width="16" height="12" fill="#3971f6"/><rect x="4" y="28" width="6" height="10" fill="#2a2a33"/>
-        <rect x="14" y="28" width="6" height="10" fill="#2a2a33"/>
-      </g>
-    </svg>
-    <svg class="pixel-terrain right" width="220" height="170" viewBox="0 0 220 170" xmlns="http://www.w3.org/2000/svg">
-      <g fill="#c9b6f5">
-        <rect x="0" y="130" width="220" height="40"/><rect x="40" y="110" width="180" height="20"/>
-        <rect x="80" y="90" width="140" height="20"/><rect x="120" y="70" width="100" height="20"/>
-        <rect x="160" y="50" width="60" height="20"/><rect x="190" y="30" width="30" height="20"/>
-      </g>
-      <g fill="#a689ee">
-        <rect x="0" y="150" width="220" height="20"/><rect x="40" y="130" width="180" height="20"/>
-        <rect x="80" y="110" width="140" height="20"/><rect x="120" y="90" width="100" height="20"/>
-        <rect x="160" y="70" width="60" height="20"/>
-      </g>
-      <g fill="#7fe7a8">
-        <rect x="190" y="126" width="30" height="6"/><rect x="160" y="106" width="26" height="6"/>
-        <rect x="122" y="86" width="34" height="6"/><rect x="92" y="66" width="26" height="6"/>
-      </g>
-      <g><rect x="202" y="120" width="6" height="6" fill="#f6b51f"/><rect x="168" y="100" width="6" height="6" fill="#ef5bb5"/><rect x="134" y="80" width="6" height="6" fill="#f6b51f"/></g>
-      <g transform="translate(52,96)">
-        <rect x="0" y="8" width="24" height="14" fill="#a9691f"/><rect x="0" y="4" width="24" height="6" fill="#c98330"/>
-        <rect x="10" y="6" width="4" height="4" fill="#ffd23f"/>
-      </g>
-    </svg>
+    <!-- Left Pixel Terrain (Grass, Dirt, and Character) -->
+<svg class="pixel-terrain left" width="220" height="170" viewBox="0 0 220 170" xmlns="http://www.w3.org/2000/svg">
+  <!-- Base Dirt -->
+  <g fill="#8b5cf6">
+    <rect x="0" y="130" width="220" height="40"/><rect x="0" y="110" width="180" height="20"/>
+    <rect x="0" y="90" width="140" height="20"/><rect x="0" y="70" width="100" height="20"/>
+    <rect x="0" y="50" width="60" height="20"/><rect x="0" y="30" width="30" height="20"/>
+  </g>
+  <!-- Deep Dirt Shadows -->
+  <g fill="#7c3aed">
+    <rect x="0" y="150" width="220" height="20"/><rect x="0" y="130" width="180" height="20"/>
+    <rect x="0" y="110" width="140" height="20"/><rect x="0" y="90" width="100" height="20"/>
+    <rect x="0" y="70" width="60" height="20"/>
+  </g>
+  <!-- Green Grass Overhang -->
+  <g fill="#4ade80">
+    <rect x="0" y="24" width="30" height="6"/><rect x="30" y="44" width="30" height="6"/>
+    <rect x="60" y="64" width="40" height="6"/><rect x="100" y="84" width="40" height="6"/>
+    <rect x="140" y="104" width="40" height="6"/><rect x="180" y="124" width="40" height="6"/>
+  </g>
+  <!-- Pixel Character -->
+  <g transform="translate(45, 54)">
+    <rect x="4" y="0" width="12" height="10" fill="#fca5a5" /> <!-- Face -->
+    <rect x="4" y="0" width="12" height="4" fill="#44403c" /> <!-- Hair -->
+    <rect x="2" y="10" width="16" height="12" fill="#3b82f6" /> <!-- Shirt -->
+    <rect x="4" y="22" width="5" height="10" fill="#1e3a8a" /> <!-- Leg L -->
+    <rect x="11" y="22" width="5" height="10" fill="#1e3a8a" /> <!-- Leg R -->
+  </g>
+  <!-- Decorative Flowers -->
+  <g><rect x="15" y="120" width="6" height="6" fill="#ef5bb5"/><rect x="110" y="80" width="6" height="6" fill="#f6b51f"/></g>
+</svg>
+
+<!-- Right Pixel Terrain (Grass, Dirt, and Chest) -->
+<svg class="pixel-terrain right" width="220" height="170" viewBox="0 0 220 170" xmlns="http://www.w3.org/2000/svg">
+  <!-- Base Dirt -->
+  <g fill="#8b5cf6">
+    <rect x="0" y="130" width="220" height="40"/><rect x="40" y="110" width="180" height="20"/>
+    <rect x="80" y="90" width="140" height="20"/><rect x="120" y="70" width="100" height="20"/>
+    <rect x="160" y="50" width="60" height="20"/><rect x="190" y="30" width="30" height="20"/>
+  </g>
+  <!-- Deep Dirt Shadows -->
+  <g fill="#7c3aed">
+    <rect x="0" y="150" width="220" height="20"/><rect x="40" y="130" width="180" height="20"/>
+    <rect x="80" y="110" width="140" height="20"/><rect x="120" y="90" width="100" height="20"/>
+    <rect x="160" y="70" width="60" height="20"/>
+  </g>
+  <!-- Green Grass Overhang -->
+  <g fill="#4ade80">
+    <rect x="190" y="24" width="30" height="6"/><rect x="160" y="44" width="30" height="6"/>
+    <rect x="120" y="64" width="40" height="6"/><rect x="80" y="84" width="40" height="6"/>
+    <rect x="40" y="104" width="40" height="6"/><rect x="0" y="124" width="40" height="6"/>
+  </g>
+  <!-- Treasure Chest -->
+  <g transform="translate(60, 92)">
+    <rect x="0" y="8" width="24" height="14" fill="#a9691f" stroke="#7a4a12" stroke-width="1.5"/>
+    <rect x="0" y="4" width="24" height="8" fill="#c98330" stroke="#7a4a12" stroke-width="1.5"/>
+    <rect x="10" y="7" width="4" height="6" fill="#ffd23f"/> <!-- Lock -->
+  </g>
+  <!-- Decorative Flowers -->
+  <g><rect x="180" y="40" width="6" height="6" fill="#f6b51f"/><rect x="25" y="120" width="6" height="6" fill="#ef5bb5"/></g>
+</svg>
   </div>
 
   <header class="site-header" id="siteHeader">
@@ -91,40 +112,40 @@
       </a>
 
       <nav class="desktop-nav" aria-label="Primary navigation">
-        <a href="#/discover">Discover</a>
-        <a href="#/games">Games</a>
-        <a href="#/explore">Creators</a>
-        <a href="#/freelancers">Freelance</a>
-        <a href="#/assets">Assets</a>
-        <a href="#/projects">Projects</a>
-        <a href="#/market">Market</a>
-        <div class="nav-more">
-          <button class="nav-link-button" type="button" id="navMoreBtn" aria-haspopup="true" aria-expanded="false">More</button>
-          <div class="nav-more-panel" id="navMorePanel" hidden>
-            <a href="#/auctions">Auctions</a>
-            <a href="#/jams">Game Jams</a>
-            <a href="#/community">Community</a>
-            <a href="#/jobs">Jobs</a>
-            <a href="#/funding">Funding</a>
-            <a href="#/devlogs">Devlogs</a>
-            <a href="#/events">Events</a>
-            <a href="#/tutorials">Tutorials</a>
-            <a href="#/leaderboards">Leaderboards</a>
-            <a href="#/rewards">Rewards</a>
-          </div>
-        </div>
-      </nav>
+  <a href="#/discover">Discover</a>
+  <a href="#/games">Games</a>
+  <a href="#/explore">Creators</a>
+  <a href="#/freelancers">Freelance</a>
+  <a href="#/assets">Assets</a>
+  <a href="#/projects">Projects</a>
+  <a href="#/market">Market</a>
+  <div class="nav-more">
+    <button class="nav-link-button" type="button" id="navMoreBtn" aria-haspopup="true" aria-expanded="false">More</button>
+    <div class="nav-more-panel" id="navMorePanel" hidden>
+      <a href="#/auctions">Auctions</a>
+      <a href="#/jams">Game Jams</a>
+      <a href="#/community">Community</a>
+      <a href="#/jobs">Jobs</a>
+      <a href="#/funding">Funding</a>
+      <a href="#/devlogs">Devlogs</a>
+      <a href="#/events">Events</a>
+      <a href="#/tutorials">Tutorials</a>
+      <a href="#/leaderboards">Leaderboards</a>
+      <a href="#/rewards">Rewards</a>
+    </div>
+  </div>
+</nav>
 
       <div class="header-actions">
         <button class="icon-btn magnetic" type="button" data-search-open aria-label="Search">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.6"/><path d="m16 16 4 4"/></svg>
         </button>
-        <a class="icon-btn desktop-only magnetic" href="#/dashboard" aria-label="Creator Credits" data-toast="1,240 CC · demo balance">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5c0-1.4 1.1-2.2 2.5-2.2s2.5.7 2.5 1.9c0 2.6-5 1.9-5 4.6 0 1.2 1.1 2 2.5 2s2.5-.8 2.5-2"/></svg>
-        </a>
-        <a class="icon-btn desktop-only magnetic" href="#/dashboard" aria-label="Notifications" data-toast="No new notifications">
+        <button class="icon-btn desktop-only magnetic" type="button" aria-label="Apps">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="5" height="5" rx="1"/><rect x="15" y="4" width="5" height="5" rx="1"/><rect x="4" y="15" width="5" height="5" rx="1"/><rect x="15" y="15" width="5" height="5" rx="1"/></svg>
+        </button>
+        <button class="icon-btn desktop-only magnetic" type="button" aria-label="Notifications" data-toast="No new notifications">
           <svg viewBox="0 0 24 24"><path d="M18 8.5a6 6 0 0 0-12 0c0 6-2.5 7-2.5 7h17S18 14.5 18 8.5Z"/><path d="M10 19h4"/></svg>
-        </a>
+        </button>
         <button class="btn btn-primary magnetic desktop-only" type="button" data-start-project>Start a Project</button>
         <button class="icon-btn mobile-menu-btn" type="button" id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false">
           <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -132,21 +153,18 @@
       </div>
     </div>
     <div class="mobile-menu glass-card" id="mobileMenu" hidden>
-      <a href="#/discover">Discover</a>
-      <a href="#/games">Games</a>
-      <a href="#/explore">Creators</a>
-      <a href="#/freelancers">Freelance</a>
-      <a href="#/assets">Assets</a>
+      <a href="#/explore">Explore</a>
       <a href="#/projects">Projects</a>
-      <a href="#/market">Market</a>
-      <a href="#/jobs">Jobs</a>
-      <a href="#/jams">Game Jams</a>
-      <a href="#/community">Community</a>
-      <a href="#/dashboard">Dashboard</a>
+      <a href="#/freelancers">Freelancers</a>
       <button type="button" data-search-open>Search</button>
       <button class="btn btn-primary" type="button" data-start-project>Start a Project</button>
     </div>
   </header>
+
+  <!-- Kept outside <header> on purpose: the header uses transform/isolation for
+       its sticky glass effect, which would turn position:fixed here into a box
+       relative to the header instead of the full viewport. -->
+  <div class="mobile-menu-backdrop" id="mobileMenuBackdrop" hidden></div>
 
   <main id="app" tabindex="-1"></main>
 
