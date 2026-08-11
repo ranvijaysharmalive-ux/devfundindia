@@ -405,6 +405,342 @@
   ];
   const marketByKey = Object.fromEntries(creatorMarket.map(m => [m.key, m]));
 
+  // ==========================================
+  // COMMUNITY — "THE GUILD HALL"
+  // A distinct, game-hub styled community space:
+  // guilds (not generic "groups") you can found or join,
+  // a live feed you can post/react/comment on, all client-side/in-memory.
+  // ==========================================
+  const escapeHtml = (str) => String(str).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[ch]);
+
+  const guildIconChoices = ['🎮','🎨','🎵','💻','🛠️','📷','✍️','🐉','⚡','🌙','🧩','🎬'];
+
+  let guilds = [
+    { key:'indie-devs', name:'Indie Devs Circle', icon:'🎮', color:'purple', members:1240, online:86, tag:'Game Dev', desc:'Ship devlogs, swap feedback, find your next collaborator.', joined:true },
+    { key:'pixel-art', name:'Pixel & Paint', icon:'🎨', color:'pink', members:860, online:41, tag:'Art', desc:'Sprite critiques, palette swaps, tileset jams.', joined:false },
+    { key:'ost-lounge', name:'OST Lounge', icon:'🎵', color:'blue', members:512, online:19, tag:'Music', desc:'Share loops, stems and soundtrack works-in-progress.', joined:true },
+    { key:'code-cave', name:'The Code Cave', icon:'💻', color:'green', members:980, online:63, tag:'Engineering', desc:'Shader tricks, netcode war stories, code review swaps.', joined:false },
+    { key:'founders-table', name:'Founders\u2019 Table', icon:'\uD83D\uDEE0\uFE0F', color:'orange', members:340, online:12, tag:'Business', desc:'Funding strategy, GST doubts, launch playbooks.', joined:false },
+    { key:'vr-immersive', name:'VR & Immersive', icon:'\uD83E\uDD7D', color:'cyan', members:275, online:14, tag:'XR', desc:'Photogrammetry, comfort settings, headset debugging.', joined:false }
+  ];
+
+  let communityPosts = [
+    { id:'p1', guildKey:'indie-devs', author:'Ananya Das', avatar:null, time:'18m ago', pinned:true,
+      text:'Devlog #14 — added parallax to the folk-art backgrounds in Aether. Frame-by-frame animation is brutal but worth every hour.',
+      reactions:{fire:42, heart:18, rocket:9},
+      comments:[{author:'Rohan Mehta', text:'This looks incredible, the color grading alone \uD83D\uDE0D'},{author:'Vikram Rao', text:'What are you painting the frames in?'}] },
+    { id:'p2', guildKey:'code-cave', author:'Karthik Iyer', avatar:null, time:'42m ago', pinned:false,
+      text:'Finally squashed the netcode desync bug that\u2019s been haunting our co-op build for two weeks. It was a rounding error in the tick reconciliation, of course.',
+      reactions:{fire:21, heart:6, rocket:14},
+      comments:[{author:'Ananya Das', text:'The classic "it was always the rounding" ending \uD83D\uDE05'}] },
+    { id:'p3', guildKey:'ost-lounge', author:'Rohan Mehta', avatar:null, time:'1h ago', pinned:false,
+      text:'Dropped a rough mix of track 7 from Synthwave Mumbai — layering a sitar sample under the arpeggios. Feedback welcome before mastering.',
+      reactions:{fire:16, heart:11, rocket:3}, comments:[] },
+    { id:'p4', guildKey:'pixel-art', author:'PixelForge', avatar:null, time:'3h ago', pinned:false,
+      text:'New tileset drop: Medieval Village Pack now has autumn and monsoon palette variants. Would love critiques on the roof shading.',
+      reactions:{fire:33, heart:9, rocket:5}, comments:[{author:'Vikram Rao', text:'The monsoon puddles are such a nice touch.'}] },
+    { id:'p5', guildKey:'vr-immersive', author:'Vikram Rao', avatar:null, time:'5h ago', pinned:false,
+      text:'Hit a stable 90fps on the Hampi VR walk after baking lightmaps instead of real-time GI. Comfort mode testers, I need you this weekend.',
+      reactions:{fire:19, heart:4, rocket:8}, comments:[] }
+  ];
+
+  let ghActiveGuildFilter = null;
+  let ghActiveTab = 'all';
+  const ghReactedKeys = new Set();
+
+  function ghGuildByKey(key){ return guilds.find(g => g.key === key); }
+
+  function ghGuildChip(g){
+    return `<div class="gh-guild-chip gh-c-${g.color} ${g.joined ? 'is-joined' : ''} ${ghActiveGuildFilter === g.key ? 'is-active' : ''}" data-guild-select="${g.key}" data-guild-name="${escapeHtml(g.name)} ${escapeHtml(g.tag)}" tabindex="0">
+      <span class="gh-chip-icon">${g.icon}</span>
+      <span class="gh-chip-body"><b>${escapeHtml(g.name)}</b><small>${fmt(g.members)} members \u00b7 ${g.online} online</small></span>
+      <button type="button" class="gh-join-btn ${g.joined ? 'joined' : ''}" data-join="${g.key}" aria-label="${g.joined ? 'Leave' : 'Join'} ${escapeHtml(g.name)}">${g.joined ? '\u2713 In' : '+ Join'}</button>
+    </div>`;
+  }
+
+  function ghCommentRow(c){
+    return `<div class="gh-comment">${avatarMarkup(null, c.author, 'avatar-xs')}<div><b>${escapeHtml(c.author)}</b><span>${escapeHtml(c.text)}</span></div></div>`;
+  }
+
+  function ghPostCard(p){
+    const g = ghGuildByKey(p.guildKey);
+    return `<article class="gh-post ${p.pinned ? 'gh-pinned' : ''}" data-post="${p.id}">
+      ${p.pinned ? '<span class="gh-pin-tag">\uD83D\uDCCC Pinned by guild</span>' : ''}
+      <div class="gh-post-head">
+        ${avatarMarkup(p.avatar, p.author, 'avatar-xs')}
+        <div class="gh-post-who"><b>${escapeHtml(p.author)}</b><span class="gh-post-meta">${g ? `${g.icon} ${escapeHtml(g.name)}` : ''} \u00b7 ${p.time}</span></div>
+      </div>
+      <p class="gh-post-text">${escapeHtml(p.text)}</p>
+      <div class="gh-post-actions">
+        <button type="button" class="gh-react ${ghReactedKeys.has(p.id+':fire') ? 'reacted' : ''}" data-react="fire" data-post="${p.id}">\uD83D\uDD25 <span>${p.reactions.fire}</span></button>
+        <button type="button" class="gh-react ${ghReactedKeys.has(p.id+':heart') ? 'reacted' : ''}" data-react="heart" data-post="${p.id}">\u2764\uFE0F <span>${p.reactions.heart}</span></button>
+        <button type="button" class="gh-react ${ghReactedKeys.has(p.id+':rocket') ? 'reacted' : ''}" data-react="rocket" data-post="${p.id}">\uD83D\uDE80 <span>${p.reactions.rocket}</span></button>
+        <button type="button" class="gh-comment-toggle" data-toggle-comments="${p.id}">\uD83D\uDCAC <span>${p.comments.length}</span> comments</button>
+      </div>
+      <div class="gh-comments" id="comments-${p.id}" hidden>
+        ${p.comments.map(ghCommentRow).join('')}
+        <form class="gh-comment-form" data-comment-form="${p.id}">
+          <input type="text" placeholder="Add a comment\u2026" required maxlength="240" />
+          <button type="submit" class="gh-comment-send" aria-label="Send comment">\u2192</button>
+        </form>
+      </div>
+    </article>`;
+  }
+
+  function ghFilteredPosts(){
+    let list = communityPosts.slice();
+    if (ghActiveGuildFilter) list = list.filter(p => p.guildKey === ghActiveGuildFilter);
+    if (ghActiveTab === 'following') {
+      const joinedKeys = new Set(guilds.filter(g => g.joined).map(g => g.key));
+      list = list.filter(p => joinedKeys.has(p.guildKey));
+    } else if (ghActiveTab === 'trending') {
+      list = list.slice().sort((a,b) => {
+        const scoreA = a.reactions.fire + a.reactions.heart + a.reactions.rocket;
+        const scoreB = b.reactions.fire + b.reactions.heart + b.reactions.rocket;
+        return scoreB - scoreA;
+      });
+    }
+    list = list.slice().sort((a,b) => (b.pinned === a.pinned) ? 0 : (b.pinned ? 1 : -1));
+    return list;
+  }
+
+  function ghFeedHtml(){
+    const list = ghFilteredPosts();
+    if (!list.length) return `<div class="gh-empty-feed"><span>${icons.sparkle}</span><p>No posts here yet. Be the first to share something with this guild.</p></div>`;
+    return list.map(ghPostCard).join('');
+  }
+
+  function ghJoinedCount(){ return guilds.filter(g => g.joined).length; }
+  function ghOnlineTotal(){ return guilds.reduce((s,g) => s + g.online, 0); }
+
+  function guildHallInner(){
+    return `
+      <div class="gh-hud">
+        <div class="gh-hud-left">
+          <span class="gh-hud-avatar">Y</span>
+          <div>
+            <p class="gh-hud-name">You \u00b7 Level 4 Builder</p>
+            <div class="gh-xp-bar"><span style="width:62%"></span></div>
+          </div>
+        </div>
+        <div class="gh-hud-stats">
+          <span><b>${guilds.length}</b> guilds</span>
+          <span><b id="ghJoinedCount">${ghJoinedCount()}</b> joined</span>
+          <span><b>${ghOnlineTotal()}</b> online now</span>
+        </div>
+      </div>
+
+      <div class="gh-layout">
+        <aside class="gh-sidebar">
+          <label class="gh-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.6"/><path d="m16 16 4 4"/></svg><input id="guildSearchInput" placeholder="Find a guild\u2026" autocomplete="off" /></label>
+          <div class="gh-guild-list" id="guildList">${guilds.map(ghGuildChip).join('')}</div>
+          <button type="button" class="gh-create-btn" id="openCreateGuild">+ Found a new guild</button>
+          <div class="gh-create-panel" id="createGuildPanel" hidden>
+            <form id="createGuildForm">
+              <input name="name" placeholder="Guild name" required maxlength="40" />
+              <div class="gh-icon-pick">${guildIconChoices.map((ic,i)=>`<button type="button" class="gh-icon-opt ${i===0?'picked':''}" data-icon="${ic}">${ic}</button>`).join('')}</div>
+              <input name="tag" placeholder="Category \u2014 e.g. Art, Music, Engineering" maxlength="24" />
+              <textarea name="desc" rows="2" placeholder="What's this guild about?" maxlength="140"></textarea>
+              <button class="btn btn-primary" type="submit">Create guild <span>\u2192</span></button>
+            </form>
+          </div>
+        </aside>
+
+        <div class="gh-feed">
+          <div class="gh-feed-tabs">
+            <button type="button" class="gh-tab ${ghActiveTab==='all'?'active':''}" data-feed-tab="all">All activity</button>
+            <button type="button" class="gh-tab ${ghActiveTab==='following'?'active':''}" data-feed-tab="following">My guilds</button>
+            <button type="button" class="gh-tab ${ghActiveTab==='trending'?'active':''}" data-feed-tab="trending">\uD83D\uDD25 Trending</button>
+          </div>
+          <div class="gh-composer">
+            ${avatarMarkup(null, 'You', 'avatar-xs')}
+            <input id="composerInput" type="text" maxlength="280" placeholder="Share a devlog, ask for feedback, post progress\u2026" />
+            <select id="composerGuild">${guilds.map(g=>`<option value="${g.key}">${g.icon} ${escapeHtml(g.name)}</option>`).join('')}</select>
+            <button type="button" class="btn btn-primary" id="composerPost">Post</button>
+          </div>
+          <div class="gh-posts" id="guildFeed">${ghFeedHtml()}</div>
+        </div>
+
+        <aside class="gh-right">
+          <div class="gh-panel gh-live">
+            <h4>Live now</h4>
+            <div class="gh-live-avatars">${['A','R','V','K','P','+'].map(l=>`<span class="gh-live-dot">${l}</span>`).join('')}</div>
+            <p class="muted">${ghOnlineTotal()} creators online across all guilds right now.</p>
+          </div>
+          <div class="gh-panel gh-tags">
+            <h4>Trending tags</h4>
+            <div class="gh-tag-cloud">${['#devlog','#pixelart','#gamejam','#netcode','#soundtrack','#vr','#shaders','#feedback'].map(t=>`<span class="gh-tag-chip">${t}</span>`).join('')}</div>
+          </div>
+          <div class="gh-panel gh-guidelines">
+            <h4>Guild etiquette</h4>
+            <ul>
+              <li>Credit collaborators & assets</li>
+              <li>Critique the work, not the creator</li>
+              <li>No spam, no unsolicited DMs</li>
+            </ul>
+          </div>
+        </aside>
+      </div>`;
+  }
+
+  function communityView(){
+    return `<div class="page-shell gh-page">${pixelField()}
+      <section class="gh-wrap" id="ghRoot">${guildHallInner()}</section>
+      ${ctaFooter()}
+    </div>`;
+  }
+
+  function ghRefreshHud(){
+    const jc = $('#ghJoinedCount');
+    if (jc) jc.textContent = ghJoinedCount();
+  }
+
+  function ghBindGuildChip(chip){
+    if (!chip || chip.dataset.ghBound) return;
+    chip.dataset.ghBound = '1';
+    chip.addEventListener('click', (e) => {
+      if (e.target.closest('[data-join]')) return;
+      const key = chip.dataset.guildSelect;
+      ghActiveGuildFilter = (ghActiveGuildFilter === key) ? null : key;
+      $$('.gh-guild-chip', chip.parentElement).forEach(c => c.classList.toggle('is-active', c.dataset.guildSelect === ghActiveGuildFilter));
+      ghRerenderFeed();
+    });
+    chip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chip.click(); } });
+    const joinBtn = $('[data-join]', chip);
+    joinBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const g = ghGuildByKey(joinBtn.dataset.join);
+      if (!g) return;
+      g.joined = !g.joined;
+      g.members += g.joined ? 1 : -1;
+      chip.classList.toggle('is-joined', g.joined);
+      joinBtn.classList.toggle('joined', g.joined);
+      joinBtn.textContent = g.joined ? '\u2713 In' : '+ Join';
+      $('small', chip).textContent = `${fmt(g.members)} members \u00b7 ${g.online} online`;
+      ghRefreshHud();
+      showToast(g.joined ? `Joined ${g.name} \u2014 welcome aboard!` : `You left ${g.name}.`);
+    });
+  }
+
+  function ghBindPost(el){
+    if (!el || el.dataset.ghBound) return;
+    el.dataset.ghBound = '1';
+    const postId = el.dataset.post;
+
+    $$('[data-react]', el).forEach(btn => btn.addEventListener('click', () => {
+      const post = communityPosts.find(p => p.id === postId);
+      const type = btn.dataset.react;
+      if (!post) return;
+      const rk = postId + ':' + type;
+      const span = $('span', btn);
+      if (ghReactedKeys.has(rk)) { ghReactedKeys.delete(rk); post.reactions[type]--; btn.classList.remove('reacted'); }
+      else { ghReactedKeys.add(rk); post.reactions[type]++; btn.classList.add('reacted'); }
+      span.textContent = post.reactions[type];
+    }));
+
+    const toggleBtn = $('[data-toggle-comments]', el);
+    const panel = $('.gh-comments', el);
+    toggleBtn?.addEventListener('click', () => { panel.hidden = !panel.hidden; });
+
+    const form = $('[data-comment-form]', el);
+    form?.addEventListener('submit', e => {
+      e.preventDefault();
+      const input = $('input', form);
+      const text = input.value.trim();
+      if (!text) return;
+      const post = communityPosts.find(p => p.id === postId);
+      post.comments.push({ author: 'You', text });
+      form.insertAdjacentHTML('beforebegin', ghCommentRow({ author: 'You', text }));
+      input.value = '';
+      panel.hidden = false;
+      $('span', toggleBtn).textContent = post.comments.length;
+    });
+  }
+
+  function ghRerenderFeed(){
+    const feed = $('#guildFeed');
+    if (!feed) return;
+    feed.innerHTML = ghFeedHtml();
+    $$('.gh-post', feed).forEach(ghBindPost);
+  }
+
+  function bindCommunityUI(){
+    const root = $('#ghRoot');
+    if (!root) return;
+
+    $$('.gh-guild-chip', root).forEach(ghBindGuildChip);
+    $$('.gh-post', root).forEach(ghBindPost);
+
+    $$('[data-feed-tab]', root).forEach(btn => btn.addEventListener('click', () => {
+      ghActiveTab = btn.dataset.feedTab;
+      $$('[data-feed-tab]', root).forEach(b => b.classList.toggle('active', b === btn));
+      ghRerenderFeed();
+    }));
+
+    $('#guildSearchInput', root)?.addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      $$('.gh-guild-chip', root).forEach(chip => {
+        const hay = chip.dataset.guildName.toLowerCase();
+        chip.style.display = (!q || hay.includes(q)) ? '' : 'none';
+      });
+    });
+
+    const createBtn = $('#openCreateGuild', root);
+    const createPanel = $('#createGuildPanel', root);
+    createBtn?.addEventListener('click', () => { createPanel.hidden = !createPanel.hidden; });
+
+    let ghPickedIcon = guildIconChoices[0];
+    $$('.gh-icon-opt', root).forEach(b => b.addEventListener('click', () => {
+      $$('.gh-icon-opt', root).forEach(x => x.classList.remove('picked'));
+      b.classList.add('picked');
+      ghPickedIcon = b.dataset.icon;
+    }));
+
+    $('#createGuildForm', root)?.addEventListener('submit', e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const name = (fd.get('name') || '').trim();
+      if (!name) return;
+      let key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      if (!key || ghGuildByKey(key)) key = `guild-${Date.now()}`;
+      const palette = ['purple','pink','blue','green','orange','cyan'];
+      const g = { key, name, icon: ghPickedIcon, color: palette[guilds.length % palette.length],
+        members: 1, online: 1, tag: (fd.get('tag') || 'Community').trim(),
+        desc: (fd.get('desc') || 'A brand-new guild \u2014 be the first to post.').trim(), joined: true };
+      guilds.unshift(g);
+      ghActiveGuildFilter = key;
+      $('#guildList', root).insertAdjacentHTML('afterbegin', ghGuildChip(g));
+      ghBindGuildChip($('[data-guild-select="'+key+'"]', root));
+      $$('.gh-guild-chip', root).forEach(c => c.classList.toggle('is-active', c.dataset.guildSelect === ghActiveGuildFilter));
+      $('#composerGuild', root).insertAdjacentHTML('afterbegin', `<option value="${key}">${g.icon} ${escapeHtml(g.name)}</option>`);
+      $('#composerGuild', root).value = key;
+      e.target.reset();
+      ghPickedIcon = guildIconChoices[0];
+      $$('.gh-icon-opt', root).forEach((x,i) => x.classList.toggle('picked', i===0));
+      createPanel.hidden = true;
+      ghRefreshHud();
+      ghRerenderFeed();
+      showToast(`${name} is live! Connect this form to your backend to persist it.`);
+    });
+
+    const composerPost = $('#composerPost', root);
+    composerPost?.addEventListener('click', () => {
+      const input = $('#composerInput', root);
+      const guildSel = $('#composerGuild', root);
+      const text = input.value.trim();
+      if (!text) { input.focus(); return; }
+      communityPosts.unshift({
+        id: 'p' + Date.now(), guildKey: guildSel.value, author: 'You', avatar: null, time: 'Just now',
+        pinned: false, text, reactions: { fire: 0, heart: 0, rocket: 0 }, comments: []
+      });
+      input.value = '';
+      ghRerenderFeed();
+      showToast('Posted to the guild feed \u2014 connect this to your backend to save it.');
+    });
+  }
+
   // --- MISSING RENDER FUNCTIONS ---
   function risingCreatorCard(c) {
     const m = marketByKey[c.key] || {trust:90, index:70};
@@ -1112,6 +1448,7 @@
   function renderRoute() {
     const {parts, anchor} = parseRoute();
     const page = parts[0] || '';
+    document.body.classList.toggle('is-community-page', page === 'community');
     if (!page) app.innerHTML = homeView();
     else if (page === 'projects') app.innerHTML = projectsView();
     else if (page === 'explore') app.innerHTML = exploreView();
@@ -1120,9 +1457,11 @@
     else if (page === 'service') app.innerHTML = serviceView(parts[1]);
     else if (page === 'project') app.innerHTML = projectView(parts[1]);
     else if (page === 'search') app.innerHTML = searchRouteView();
+    else if (page === 'community') app.innerHTML = communityView();
     else app.innerHTML = `<div class="page-shell">${pixelField()}<div class="empty-state glass-card"><span class="brand-mark">${icons.sparkle}</span><h2>Page not found</h2><p>The page you requested does not exist in this prototype.</p><a class="btn btn-primary" href="#/">Go home</a></div>${ctaFooter()}</div>`;
 
     bindDynamicUI();
+    if (page === 'community') bindCommunityUI();
     initScrollReveal();
     initProgressBars();
     initGSAPParallax();
@@ -1324,7 +1663,8 @@
     let pool = [
       ...projects.map(x=>({type:'Project',title:x.title,sub:x.creator,href:x.id==='aether'?'#/service/unity-game-development':'#/projects'})),
       ...creators.map(x=>({type:'Creator',title:x.name,sub:x.role,href:`#/creator/${x.key}`})),
-      ...services.map(x=>({type:'Service',title:x.title,sub:`Starting at ₹${fmt(x.price)}`,href:`#/service/${x.key}`}))
+      ...services.map(x=>({type:'Service',title:x.title,sub:`Starting at ₹${fmt(x.price)}`,href:`#/service/${x.key}`})),
+      ...guilds.map(x=>({type:'Guild',title:x.name,sub:`${x.tag} · ${fmt(x.members)} members`,href:'#/community'}))
     ];
     if (query) pool = pool.filter(x => `${x.title} ${x.sub} ${x.type}`.toLowerCase().includes(query));
     pool = pool.slice(0,8);
@@ -1377,6 +1717,7 @@ if (fixMenu) {
     <a href="#/assets">Assets</a>
     <a href="#/projects">Projects</a>
     <a href="#/market">Market</a>
+    <a href="#/community">Community</a>
     <button type="button" data-search-open>Search</button>
     <button class="btn btn-primary" type="button" data-start-project>Start a Project</button>
   `;
