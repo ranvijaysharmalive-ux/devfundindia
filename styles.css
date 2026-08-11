@@ -63,7 +63,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 @keyframes floatOrb{to{transform:translate3d(70px,45px,0) scale(1.08)}}
 
 .site-header{position:sticky;top:0;z-index:50;padding:10px clamp(16px,2.4vw,36px) 0;transition:.25s ease;transform:translateZ(0);backface-visibility:hidden;isolation:isolate}
-.header-shell{height:var(--header-h);max-width:1440px;margin:0 auto;border-radius:26px;padding:0 22px 0 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;transition:.28s ease}
+.header-shell{height:var(--header-h);max-width:1680px;margin:0 auto;border-radius:26px;padding:0 22px 0 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;transition:.28s ease}
 .glass-nav{
   background:rgba(255,255,255,.76);
   backdrop-filter:blur(24px) saturate(165%);
@@ -77,7 +77,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .brand-mark{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:white;background:linear-gradient(135deg,#8b5cf6,#4f46e5);box-shadow:0 9px 22px rgba(91,67,223,.26),inset 0 1px 0 rgba(255,255,255,.28)}
 .brand-mark svg{width:24px;height:24px}
 .desktop-nav{display:flex;align-items:center;gap:4px;padding:6px;border-radius:999px;background:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.5)}
-.desktop-nav a,.nav-link-button{border:0;background:transparent;padding:10px 16px;border-radius:999px;font-weight:650;font-size:14.5px;color:#696874;cursor:pointer;transition:.2s ease}
+.desktop-nav a,.nav-link-button{border:0;background:transparent;padding:10px 13px;border-radius:999px;font-weight:650;font-size:14px;color:#696874;cursor:pointer;transition:.2s ease;white-space:nowrap}
 .desktop-nav a:hover,.nav-link-button:hover{color:var(--ink);background:rgba(255,255,255,.72);box-shadow:0 4px 15px rgba(60,50,99,.08),0 0 16px rgba(139,92,246,.18)}
 .header-actions{justify-self:end;display:flex;align-items:center;gap:11px}
 .icon-btn{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;border:1px solid transparent;background:transparent;cursor:pointer;transition:.2s ease}
@@ -1176,6 +1176,376 @@ p.muted,
 .section-head > a {
   position: relative;
   z-index: 5;
+}
+
+/* ==========================================================
+   THE GUILD HALL — community section
+   A deliberately different register from the light glass-card
+   pages: a dark, game-HUD styled hall with neon seams, pixel
+   corners and a chat/guild aesthetic instead of bento tiles.
+   ========================================================== */
+.gh-page{padding-top:0}
+.gh-wrap{
+  margin-top:0;
+  /* Break fully out of .page-shell's centered, max-width column —
+     this is a full-bleed page section, not a card floating in a box. */
+  position:relative;
+  left:50%; right:50%;
+  margin-left:-50vw; margin-right:-50vw;
+  width:100vw;
+  padding:clamp(20px,2.6vw,34px) clamp(18px,4vw,72px);
+  border-radius:0;
+  background:
+    radial-gradient(1400px 480px at 12% -10%, rgba(139,92,246,.32), transparent 60%),
+    radial-gradient(1200px 440px at 100% 0%, rgba(239,91,181,.2), transparent 55%),
+    linear-gradient(165deg,#161226 0%,#100c1c 55%,#150f24 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+  color:#f1edff;
+  overflow:hidden;
+}
+.gh-wrap:before{
+  content:"";
+  position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size:26px 26px;
+}
+
+.gh-wrap:after {
+  display: none !important;
+  content: "";
+  position: fixed; /* Change this from absolute to fixed */
+  left: 0; 
+  right: 0; 
+  top: 0; 
+  height: 3px;
+  background: linear-gradient(90deg, #8b5cf6, #ef5bb5, #3971f6, #8b5cf6);
+  background-size: 200% auto;
+  animation: ghSeam 6s linear infinite;
+  z-index: 100; /* Add this to ensure it stays above the header */
+}
+@keyframes ghSeam{to{background-position:200% center}}
+
+.gh-hud{
+  position:relative; z-index:1;
+  max-width:2200px; margin:0 auto 22px;
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  padding:14px 18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.09);
+}
+.gh-hud-left{display:flex; align-items:center; gap:12px}
+.gh-hud-avatar{
+  width:42px; height:42px; border-radius:12px; display:grid; place-items:center;
+  font-weight:900; color:#fff;
+  background:linear-gradient(150deg,#8b5cf6,#4d45e9);
+  box-shadow:0 8px 20px rgba(139,92,246,.4);
+}
+.gh-hud-name{margin:0 0 6px; font-weight:800; font-size:13px; color:#fff}
+.gh-xp-bar{width:150px; height:6px; border-radius:999px; background:rgba(255,255,255,.12); overflow:hidden}
+.gh-xp-bar span{display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#f6b51f,#ef5bb5)}
+.gh-hud-stats{display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:rgba(241,237,255,.62)}
+.gh-hud-stats b{color:#fff; font-size:14px}
+
+.gh-layout{
+  position:relative; z-index:1;
+  max-width:2200px; margin:0 auto;
+  display:grid; grid-template-columns:280px minmax(0,1fr) 250px; gap:20px; align-items:start;
+}
+
+/* --- Sidebar: guild list --- */
+.gh-sidebar{display:grid; gap:14px; position:sticky; top:100px}
+.gh-search{
+  display:flex; align-items:center; gap:9px; padding:0 14px; height:44px;
+  border-radius:13px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+}
+.gh-search svg{width:16px; height:16px; fill:none; stroke:rgba(241,237,255,.55); stroke-width:1.8; flex:0 0 auto}
+.gh-search input{background:transparent; border:0; outline:none; color:#fff; width:100%; font-size:13px}
+.gh-search input::placeholder{color:rgba(241,237,255,.4)}
+
+.gh-guild-list{display:grid; gap:8px; padding-right:2px}
+.gh-guild-list::-webkit-scrollbar{width:5px}
+.gh-guild-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15); border-radius:99px}
+
+.gh-guild-chip{
+  display:flex; align-items:center; gap:10px; padding:10px; border-radius:14px; cursor:pointer;
+  background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.07);
+  transition:.18s ease;
+}
+.gh-guild-chip:hover{background:rgba(255,255,255,.09); transform:translateX(2px)}
+.gh-guild-chip.is-active{border-color:rgba(139,92,246,.6); box-shadow:0 0 0 3px rgba(139,92,246,.15)}
+.gh-chip-icon{
+  width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-size:16px; flex:0 0 auto;
+}
+.gh-c-purple .gh-chip-icon{background:linear-gradient(150deg,#8b5cf6,#4d45e9)}
+.gh-c-pink .gh-chip-icon{background:linear-gradient(150deg,#f472c8,#ef5bb5)}
+.gh-c-blue .gh-chip-icon{background:linear-gradient(150deg,#63a4fb,#3971f6)}
+.gh-c-green .gh-chip-icon{background:linear-gradient(150deg,#34e0a1,#0aa06e)}
+.gh-c-orange .gh-chip-icon{background:linear-gradient(150deg,#ff9553,#ff6a1a)}
+.gh-c-cyan .gh-chip-icon{background:linear-gradient(150deg,#72e2e8,#2fb8c4)}
+.gh-chip-body{min-width:0; flex:1}
+.gh-chip-body b{display:block; font-size:12.5px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.gh-chip-body small{display:block; font-size:10.5px; color:rgba(241,237,255,.5); margin-top:2px}
+.gh-join-btn{
+  flex:0 0 auto; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#fff;
+  border-radius:999px; padding:6px 10px; font-size:10.5px; font-weight:800; cursor:pointer; white-space:nowrap;
+  transition:.18s ease;
+}
+.gh-join-btn:hover{background:rgba(255,255,255,.16)}
+.gh-join-btn.joined{background:linear-gradient(120deg,#25cd90,#0aa06e); border-color:transparent; color:#06281c}
+
+.gh-create-btn{
+  border:1px dashed rgba(255,255,255,.28); background:transparent; color:#fff; border-radius:14px;
+  padding:12px; font-weight:800; font-size:12.5px; cursor:pointer; transition:.18s ease;
+}
+.gh-create-btn:hover{background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.5)}
+.gh-create-panel{
+  border-radius:16px; padding:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+  display:grid; gap:10px;
+}
+.gh-create-panel form{display:grid; gap:10px}
+.gh-create-panel input,.gh-create-panel textarea{
+  background:rgba(0,0,0,.24); border:1px solid rgba(255,255,255,.12); border-radius:11px; color:#fff;
+  padding:10px 12px; font-size:12.5px; outline:none; resize:none;
+}
+.gh-create-panel input:focus,.gh-create-panel textarea:focus{border-color:rgba(139,92,246,.6)}
+.gh-create-panel input::placeholder,.gh-create-panel textarea::placeholder{color:rgba(255,255,255,.35)}
+.gh-icon-pick{display:flex; flex-wrap:wrap; gap:6px}
+.gh-icon-opt{
+  width:32px; height:32px; border-radius:9px; border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04); cursor:pointer; font-size:15px; display:grid; place-items:center;
+}
+.gh-icon-opt.picked{border-color:#8b5cf6; background:rgba(139,92,246,.25)}
+.gh-create-panel .btn{width:100%; justify-content:center}
+
+/* --- Center: feed --- */
+.gh-feed{min-width:0}
+.gh-feed-tabs{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap}
+.gh-tab{
+  border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:rgba(241,237,255,.7);
+  border-radius:999px; padding:8px 14px; font-size:12px; font-weight:800; cursor:pointer; transition:.18s ease;
+}
+.gh-tab.active,.gh-tab:hover{background:#fff; color:#1a1330}
+
+.gh-composer{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:16px; margin-bottom:16px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+}
+.gh-composer input{
+  flex:1; min-width:0; background:transparent; border:0; outline:none; color:#fff; font-size:13px;
+}
+.gh-composer input::placeholder{color:rgba(255,255,255,.4)}
+.gh-composer select{
+  background:rgba(0,0,0,.28); color:#fff; border:1px solid rgba(255,255,255,.12); border-radius:10px;
+  padding:8px 8px; font-size:11.5px; max-width:150px;
+}
+.gh-composer .btn{min-height:38px; padding:0 16px; font-size:12.5px}
+
+.gh-posts{display:grid; gap:14px}
+.gh-empty-feed{
+  text-align:center; padding:40px 20px; color:rgba(241,237,255,.55); border-radius:18px;
+  border:1px dashed rgba(255,255,255,.14);
+}
+.gh-empty-feed span{display:inline-flex; width:34px; height:34px; margin-bottom:10px; color:#8b5cf6}
+.gh-empty-feed span svg{width:100%; height:100%; fill:currentColor}
+
+.gh-post{
+  position:relative;
+  border-radius:20px; padding:16px 18px;
+  background:rgba(255,255,255,.045);
+  border:1px solid rgba(255,255,255,.08);
+  clip-path:polygon(0 12px,12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px));
+  transition:.18s ease;
+}
+.gh-post:hover{border-color:rgba(139,92,246,.4); background:rgba(255,255,255,.07)}
+.gh-post.gh-pinned{border-color:rgba(246,181,31,.5); background:rgba(246,181,31,.06)}
+.gh-pin-tag{
+  display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:900; color:#ffcf3f;
+  margin-bottom:10px; text-transform:uppercase; letter-spacing:.06em;
+}
+.gh-post-head{display:flex; align-items:center; gap:10px; margin-bottom:10px}
+.gh-post-who b{display:block; font-size:13px; color:#fff}
+.gh-post-meta{display:block; font-size:11px; color:rgba(241,237,255,.5); margin-top:1px}
+.gh-post-text{margin:0 0 12px; font-size:13.5px; line-height:1.6; color:rgba(241,237,255,.88)}
+.gh-post-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.gh-react{
+  border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:rgba(241,237,255,.8);
+  border-radius:999px; padding:6px 11px; font-size:12px; font-weight:700; cursor:pointer;
+  display:inline-flex; align-items:center; gap:5px; transition:.15s ease;
+}
+.gh-react:hover{transform:translateY(-1px); background:rgba(255,255,255,.09)}
+.gh-react.reacted{background:rgba(139,92,246,.28); border-color:rgba(139,92,246,.6); color:#fff}
+.gh-comment-toggle{
+  margin-left:auto; border:0; background:transparent; color:rgba(241,237,255,.65); font-size:12px;
+  font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+}
+.gh-comment-toggle:hover{color:#fff}
+
+.gh-comments{margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,.08); display:grid; gap:10px}
+.gh-comment{display:flex; align-items:flex-start; gap:9px}
+.gh-comment .avatar-xs{flex:0 0 auto}
+.gh-comment div{background:rgba(255,255,255,.05); border-radius:12px; padding:8px 11px; flex:1}
+.gh-comment b{display:block; font-size:11.5px; color:#fff}
+.gh-comment span{display:block; font-size:12.5px; color:rgba(241,237,255,.78); margin-top:2px; line-height:1.5}
+.gh-comment-form{display:flex; gap:8px; margin-top:2px}
+.gh-comment-form input{
+  flex:1; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.12); border-radius:999px;
+  padding:9px 14px; color:#fff; font-size:12.5px; outline:none;
+}
+.gh-comment-form input:focus{border-color:rgba(139,92,246,.6)}
+.gh-comment-form input::placeholder{color:rgba(255,255,255,.35)}
+.gh-comment-send{
+  width:34px; height:34px; border-radius:50%; border:0; cursor:pointer; flex:0 0 auto;
+  background:linear-gradient(135deg,#8b5cf6,#4d45e9); color:#fff; font-weight:900;
+}
+
+/* --- Right rail --- */
+.gh-right{display:grid; gap:14px; position:sticky; top:100px}
+.gh-panel{
+  border-radius:18px; padding:16px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);
+}
+.gh-panel h4{margin:0 0 12px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:rgba(241,237,255,.55)}
+.gh-panel .muted{color:rgba(241,237,255,.6); font-size:12px; margin:10px 0 0; line-height:1.5}
+.gh-live-avatars{display:flex}
+.gh-live-dot{
+  width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:900;
+  color:#fff; background:linear-gradient(150deg,#8b5cf6,#4d45e9); border:2px solid #160f26; margin-left:-9px;
+}
+.gh-live-dot:first-child{margin-left:0}
+.gh-tag-cloud{display:flex; flex-wrap:wrap; gap:7px}
+.gh-tag-chip{
+  font-size:11px; font-weight:700; color:rgba(241,237,255,.8); background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1); border-radius:999px; padding:6px 10px;
+}
+.gh-guidelines ul{margin:0; padding-left:16px; display:grid; gap:8px}
+.gh-guidelines li{font-size:12px; color:rgba(241,237,255,.7); line-height:1.4}
+
+/* ---- Whole-page theming for the Community route ----
+   Without this, only .gh-wrap goes dark and the page still shows
+   its normal light header/hero/footer around it, which is what
+   reads as "a box sitting inside a page". Toggling this class on
+   <body> (see renderRoute in app.js) lets the header, route hero
+   and footer share the same dark background so the Guild Hall is
+   one continuous page, not a card floating in a lighter shell. */
+body.is-community-page{background:#120c1f}
+/* 1. Put the glowing grid on the full-screen background */
+body.is-community-page .mesh-bg {
+  background:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+    radial-gradient(1400px 480px at 12% 0%, rgba(139,92,246,.32), transparent 60%),
+    radial-gradient(1200px 440px at 100% 0%, rgba(239,91,181,.2), transparent 55%),
+    linear-gradient(165deg, #161226 0%, #100c1c 55%, #150f24 100%) !important;
+  background-size: 26px 26px, 26px 26px, auto, auto, auto !important;
+}
+
+/* 2. Make the lower container transparent so it blends perfectly */
+body.is-community-page .gh-wrap {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+/* The grid now comes from .mesh-bg above, covering the whole viewport
+   (header included) — turn off gh-wrap's own local grid so the two
+   patterns don't create a seam where the panel edges don't line up. */
+body.is-community-page .gh-wrap:before{display:none}
+body.is-community-page .mesh-orb,
+body.is-community-page .noise{opacity:0}
+
+body.is-community-page .glass-nav{
+  background:rgba(22,15,38,.72);
+  border-color:rgba(255,255,255,.1);
+  box-shadow:0 10px 34px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);
+}
+body.is-community-page .site-header.scrolled .header-shell{box-shadow:0 12px 38px rgba(0,0,0,.45)}
+body.is-community-page .desktop-nav{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
+body.is-community-page .desktop-nav a,
+body.is-community-page .nav-link-button{color:rgba(241,237,255,.72)}
+body.is-community-page .desktop-nav a:hover,
+body.is-community-page .nav-link-button:hover{color:#fff;background:rgba(255,255,255,.1);box-shadow:none}
+body.is-community-page .brand-word{color:#fff}
+body.is-community-page .brand strong{color:#c9a9ff}
+body.is-community-page .icon-btn{color:#f1edff}
+body.is-community-page .icon-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.14)}
+body.is-community-page .nav-more-panel{background:rgba(22,15,38,.96);border-color:rgba(255,255,255,.1)}
+body.is-community-page .nav-more-panel a{color:rgba(241,237,255,.75)}
+body.is-community-page .nav-more-panel a:hover{color:#fff;background:rgba(255,255,255,.08)}
+body.is-community-page .mobile-menu{background:rgba(22,15,38,.97)}
+body.is-community-page .mobile-menu a,
+body.is-community-page .mobile-menu>button:not(.btn){color:#f1edff}
+body.is-community-page .mobile-menu a:hover,
+body.is-community-page .mobile-menu>button:not(.btn):hover{background:rgba(255,255,255,.08)}
+
+/* The global contrast fix above force-colors a long list of "muted"
+   classes to pure black with !important — correct for the light
+   pages, but it also silently overrides any lighter color we set
+   for the same classes on the dark Community page (nav links,
+   footer copy, .muted panel text), which is why that text was
+   turning invisible. Re-assert a light color at matching !important
+   + higher specificity, scoped to the community page only. */
+body.is-community-page :is(
+  .muted, p.muted, .hero-sub, .project-desc, .cb-desc, .story-person span,
+  .footer-brand p, .footer-disclaimer, .trust-disclaimer, .neu-small p,
+  .desktop-nav a, .nav-link-button, .card-foot, .creator-handle,
+  .creator-role, .creator-location, .creator-meta, .service-meta, .tag,
+  .review-card p, .trust-row, .project-form label, .tab, .breadcrumb a,
+  .search-result small, .empty-state p, .pb-role, .pb-loc, .pb-verify-copy p
+){
+  color:rgba(241,237,255,.7) !important;
+}
+body.is-community-page .desktop-nav a:hover,
+body.is-community-page .nav-link-button:hover{color:#fff !important}
+
+body.is-community-page .route-hero-inner{
+  background:transparent;
+  border:none;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+  padding-left:0;
+  padding-right:0;
+}
+body.is-community-page .route-hero-inner:after{display:none}
+body.is-community-page .route-hero-inner .eyebrow{color:#c9a9ff}
+body.is-community-page .route-hero-inner h1{color:#fff}
+body.is-community-page .route-hero-inner p{color:rgba(241,237,255,.65)}
+body.is-community-page .gh-wrap:after{display:none}
+body.is-community-page .gh-wrap{margin-top:0}
+body.is-community-page .route-hero{padding-bottom:0}
+
+body.is-community-page .site-footer{
+  border-top-color:rgba(255,255,255,.08);
+  background:linear-gradient(135deg, rgba(139,92,246,.14), rgba(15,10,26,.5)) !important;
+  border:1px solid rgba(255,255,255,.1) !important;
+  border-top:1px solid rgba(255,255,255,.16) !important;
+  border-bottom:none !important;
+  box-shadow:
+    0 -20px 50px rgba(0,0,0,.35),
+    inset 0 2px 4px rgba(255,255,255,.06),
+    inset 0 -10px 30px rgba(0,0,0,.15) !important;
+}
+body.is-community-page .footer-brand p,
+body.is-community-page .footer-disclaimer,
+body.is-community-page .footer-bottom span{color:rgba(241,237,255,.55)}
+body.is-community-page .footer-disclaimer{border-top-color:rgba(255,255,255,.08)}
+body.is-community-page .footer-col a{color:rgba(241,237,255,.6)}
+body.is-community-page .footer-col a:hover{color:#fff}
+body.is-community-page .footer-links a{color:rgba(241,237,255,.6)}
+body.is-community-page .footer-links a:hover{color:#fff}
+
+@media (max-width:1180px){
+  .gh-layout{grid-template-columns:240px minmax(0,1fr)}
+  .gh-right{display:none}
+}
+@media (max-width:860px){
+  .gh-layout{grid-template-columns:1fr}
+  .gh-sidebar{position:static}
+  .gh-composer{flex-wrap:wrap}
+  .gh-composer select{max-width:none; flex:1}
+  .gh-composer .btn{width:100%}
+}
+@media (max-width:680px){
+  .gh-hud{flex-direction:column; align-items:flex-start}
+  .gh-post{padding:14px}
 }
 
 /* Mobile adjustments */
